@@ -4,11 +4,12 @@
 #
 # Import os to check version and set paths:
 import os
+import os.path
+from settings_keys import EVEN_INTERVAL_TYPE,ODD_INTERVAL_TYPE,DOW_INTERVAL_TYPE
 
 if os.name == "nt":
     application_base_dir = "D:\\controller\config"
 else:
-    import os.path
     application_base_dir = os.path.expanduser("~/.controller")
 #
 # Master config file:
@@ -18,7 +19,7 @@ master_path = os.path.join(application_base_dir,master_file_name)
 # Log files:
 #
 # Programs
-program_logs = "program_logs"
+program_logs = "logs"
 program_logs_path = os.path.join(application_base_dir,program_logs)
 program_log_name_template = "program.%s.log"
 # Application
@@ -54,9 +55,9 @@ gpio_pin_help = {pin_sr_dat : "SR Data",
                  pin_sr_oe : "SR Output Enable",
                  pin_sr_lat : "SR Latch"}
 
-interval_types = ["even",
-                          "odd",
-                          "day_of_week"]
+interval_types = [EVEN_INTERVAL_TYPE,
+                  ODD_INTERVAL_TYPE,
+                  DOW_INTERVAL_TYPE]
                           
 # Simulation parameters
 SIMULATE_GPIO = True
