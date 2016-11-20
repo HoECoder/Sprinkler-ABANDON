@@ -5,7 +5,7 @@ from settings_keys import *
 import cerberus
 
 even_odd_intervals = [EVEN_INTERVAL_TYPE,
-                                 ODD_INTERVAL_TYPE]
+                      ODD_INTERVAL_TYPE]
                                  
 def validate_interval(field, value, error):
     typ = value[INTERVAL_TYPE_KEY]
@@ -17,7 +17,7 @@ def validate_interval(field, value, error):
         mi = min(days)
         if mi < 0 or ma > 6:
             error(field, "Day of Week Interval must have a list of days Sun - Sat")
-    elif not typ in odd_even_types:
+    elif not typ in even_odd_intervals:
         error(field, "Interval type must be 'even','odd','day_of_week'")
 
 
@@ -34,6 +34,8 @@ program_schema = {PROGRAM_ID_KEY : {"type" : "integer",
                   STATION_DURATION_KEY : {"type" : "list",
                                           "schema" : {"type" : "dict",
                                                       "schema" : station_block_schema}}}
+
+program_validator = cerberus.Validator(program_schema,allow_unknown = True)
 
 class StationBlock(object):
     def __init__(self,
@@ -58,15 +60,20 @@ def unpack_station_block(d):
 
 
 class Program(object):
-    def __init__(self):
-        self.program_id  = 0
-        self.time_of_day = 0
-        self.run_time = 0
+    def __init__(self,
+                 program_id,
+                 time_of_day,
+                 interval,
+                 dow = None,
+                 is_one_shot = False,
+                 station_blocks = None):
+        self.program_id  = program_id
+        self.time_of_day = time_of_day
         self.running = False
-        self.interval = ""
-        self.dow = None
-        self.is_one_shot = 0
-        self.station_blocks = None
+        self.interval = interval
+        self.dow = dow
+        self.is_one_shot = is_one_shot
+        self.station_blocks = station_blocks
         self.is_dirty = False
     def serialize(self):
         int_d = {INTERVAL_TYPE_KEY : self.interval}
@@ -77,8 +84,19 @@ class Program(object):
         d[PROGRAM_ID_KEY] = self.program_id
         d[TIME_OF_DAY_KEY] = self.time_of_day
         d[INTERVAL_KEY] = int_d
-        d[STATION_DURATION_KEY] = self.station_blocks
+        d[STATION_DURATION_KEY] = [s.serialize() for s in self.station_blocks]
         return d
 
 def unpack_program(d):
-    pass
+    if not program_validator.validate(d):
+        return None #TODO : raise an error
+    program_id = d[PROGRAM_ID_KEY]
+    time_of_day = d[TIME_OF_DAY_KEY]
+    int_d = d[INTERVAL_KEY]
+    stations = [unpack_station_block(s) for s in d[STATION_DURATION_KEY]]
+    interval = int_d["type"]
+    if not interval in even_odd_intervals:
+        days = int_d[RUN_DAYS_KEY]
+    else:
+        days = None
+    return Program(program_id,time_of_day,interval,dow=days,station_blocks = stations)
