@@ -8,7 +8,7 @@ import os.path
 from settings_keys import EVEN_INTERVAL_TYPE,ODD_INTERVAL_TYPE,DOW_INTERVAL_TYPE
 
 if os.name == "nt":
-    application_base_dir = "D:\\controller\config"
+    application_base_dir = "D:\\controller\\config"
 else:
     application_base_dir = os.path.expanduser("~/.controller")
 #

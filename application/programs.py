@@ -42,12 +42,33 @@ class StationBlock(object):
                  station_id,
                  duration,
                  start_time=0,
-                 end_time=0):
+                 end_time=0,
+                 parent = None):
         self.station_id = station_id
-        self.duration = duration
+        self.__duration = duration
         self.start_time = start_time
         self.end_time = end_time
         self.in_station = False
+        self.__dirty=False
+        self.parent = parent
+    @property
+    def dirty(self):
+        return self.__dirty
+    @dirty.setter
+    def dirty(self, value):
+        self.__dirty = value
+    @property
+    def duration(self):
+        return self.__duration
+    @duration.setter
+    def duration(self, value):
+        if not(isinstance(value, int) or isinstance(value, float)):
+            raise TypeError(value)
+        if self.__duration != value:
+            self.__duration = value
+            self.__dirty = True
+            if not self.parent is None:
+                self.parent.fix_start_end()
     def serialize(self):
         d = OrderedDict()
         d[STATION_ID_KEY] = self.station_id
@@ -68,13 +89,40 @@ class Program(object):
                  is_one_shot = False,
                  station_blocks = None):
         self.program_id  = program_id
-        self.time_of_day = time_of_day
+        self.__time_of_day = time_of_day
         self.running = False
         self.interval = interval
         self.dow = dow
         self.is_one_shot = is_one_shot
         self.station_blocks = station_blocks
-        self.is_dirty = False
+        if not(self.station_blocks is None):
+            for sb in self.station_blocks:
+                sb.parent = self
+        self.__dirty = False
+        if not(self.station_blocks is None) and len(self.station_blocks) > 0:
+            self.fix_start_end()
+    @property
+    def dirty(self):
+        return self.__dirty or reduce(lambda x,y: x or y.dirty, self.station_blocks,False)
+    @dirty.setter
+    def dirty(self, value):
+        self.__dirty = value
+    @property
+    def time_of_day(self):
+        return self.__time_of_day
+    @time_of_day.setter
+    def time_of_day(self, value):
+        if not(isinstance(value, int) or isinstance(value, float)):
+            raise TypeError(value)
+        if self.__time_of_day != value:
+            self.__time_of_day = value
+            self.fix_start_end()
+    def fix_start_end(self):
+        start = self.__time_of_day
+        for sb in self.station_blocks:
+            sb.start_time = start
+            sb.end_time = start + sb.duration
+            start = sb.end_time
     def serialize(self):
         int_d = {INTERVAL_TYPE_KEY : self.interval}
         if not self.interval in even_odd_intervals:
