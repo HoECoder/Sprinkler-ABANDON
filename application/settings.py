@@ -1,11 +1,14 @@
 import os
 import os.path
+import glob
 import ConfigParser
+import json
 from copy import deepcopy
 from collections import OrderedDict
-from core_config import master_file_name,master_path
+from core_config import master_file_name,master_path,programs_path,program_name_template
 from settings_keys import *
 from programs import *
+from singleton import *
 
 boolean_conf_keys = [RAIN_SENSOR_KEY,
                      INVERT_RAIN_SENSOR_KEY,
@@ -15,19 +18,31 @@ boolean_conf_keys = [RAIN_SENSOR_KEY,
 int_conf_keys = [STATIONS_AVAIL_KEY]
 float_conf_keys = []
 
+@singleton
 class Settings(object):
-    def __init__(self,config_file=master_path):
+    def __init__(self, config_file = master_path):
         self.settings_file_name = config_file
         exists = os.path.exists(application_base_dir)
         if not exist:
             os.makedirs(application_base_dir)
         self.__settings = None
         self.dirty = False
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         if self.__settings is None:
             raise KeyError("Settings Not Initialized")
         return self.__settings[key]
+    def has_key(self, key):
+        return self.__settings.has_key(key)
+    def keys(self):
+        return self.__settings.keys()
+    def values(self):
+        return self.__settings.values()
+    def items(self):
+        return self.__settings.items()
+    def __len__(self):
+        return len(self.__settings)
     def load(self):
+        # The master settings file is in a INI-style format
         config = ConfigParser.ConfigParser()
         fs = config.read(self.settings_file_name)
         if len(fs) == 0:
@@ -41,6 +56,8 @@ class Settings(object):
         # Load the station info
         station_list = OrderedDict()
         master[STATION_LIST_KEY] = station_list
+        # The Station configurations are in an unbounded list by section
+        # So we need to loop through all of them
         for section in sections:
             station_id = int(section.split(' ')[1])
             options = config.options(section)
@@ -61,6 +78,7 @@ class Settings(object):
     def dump(self,force = False):
         if self.__settings is None:
             return False
+        # For performance reasons, we will not touch the disk unless there is a change or we are forcing
         if not self.dirty and not force:
             return True
         # Make a deep copy, we don't want to accidentally muck the settings in memory
@@ -83,19 +101,70 @@ class Settings(object):
         fi.close()
         del fi
         self.dirty = False
-        
+
+@singleton # ProgramManager is a Singleton  
 class ProgramManager(object):
-    def __init__(self):
+    def __init__(self, programs_path = program_logs_path):
+        self.programs_path = programs_path
+        exists = os.path.exists(self.programs_path)
+        if not exist:
+            os.makedirs(self.programs_path)
         self.__programs = OrderedDict()
+        self.program_glob = os.path.join(self.programs_path, program_name_glob)
+        self.dirty = False
     def __getitem__(self,key):
         return self.__programs[key]
-    def add_program(self,program):
+    def has_key(self, key):
+        return self.__programs.has_key(key)
+    def keys(self):
+        return self.__programs.keys()
+    def values(self):
+        return self.__programs.values()
+    def items(self):
+        return self.__programs.items()
+    def __len__(self):
+        return len(self.__programs)
+    def add_program(self, program, write_through = False):
         pass
-    def delete_program(self,program):
+    def delete_program(self, program):
         pass
     def write_programs(self):
         for pid, program in self.__programs.items():
             if program.is_dirty: # Effeciency, less disk access
-                pass # TODO : Persist code here
+                # Force the program to serialize, then turn the resultant into a JSON string
+                # This makes a nice, user friendly format
+                s = program.serialize()
+                file_name = os.path.join(self.programs_path, program_name_template % program.program_id)
+                try:
+                    program_file = open(filename,"wb")
+                    json.dump(s, program_file, indent = 4)
+                    program_file.flush()
+                    program_file.close()
+                    del program_file
+                    program.dirty = False
+                except IOError, e:
+                    pass
+                except ValueError, e:
+                    pass
+                except TypeError, e:
+                    pass
     def load_programs(self):
-        pass
+        program_paths = glob.glob(self.program_glob)
+        programs = OrderedDict()
+        for pp in program_paths:
+            try:
+                program_file = open(pp,"rb")
+                program_d = json.load(program_file)
+                program = unpack_program(program_d)
+                programs[program.program_id] = program
+                program_file.close()
+                del program_file
+            except IOError, e:
+                pass #TODO : Figure out a better thing to do here
+        if len(programs) > 0:
+            self.__programs = programs
+            self.dirty = False
+            return True
+        else:
+            return False
+

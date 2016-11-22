@@ -19,6 +19,8 @@ master_path = os.path.join(application_base_dir,master_file_name)
 # Program locations
 programs_path_part = "programs"
 programs_path = os.path.join(application_base_dir,programs_path_part)
+program_name_glob = "program.*.json"
+program_name_template = "program.%d.json"
 #
 # Log files:
 #
