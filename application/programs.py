@@ -6,6 +6,10 @@ import cerberus
 
 even_odd_intervals = [EVEN_INTERVAL_TYPE,
                       ODD_INTERVAL_TYPE]
+                      
+TOO_EARLY = -1
+STOP = 0
+START = 1
                                  
 def validate_interval(field, value, error):
     typ = value[INTERVAL_TYPE_KEY]
@@ -87,10 +91,10 @@ class Program(object):
                  interval,
                  dow = None,
                  is_one_shot = False,
-                 station_blocks = None):
+                 station_blocks = list()):
         self.program_id  = program_id
         self.__time_of_day = time_of_day
-        self.running = False
+        self.__running = False
         self.interval = interval
         self.dow = dow
         self.is_one_shot = is_one_shot
@@ -117,6 +121,16 @@ class Program(object):
         if self.__time_of_day != value:
             self.__time_of_day = value
             self.fix_start_end()
+    @property
+    def running(self):
+        return self.__running
+    @running.setter
+    def running(self, value):
+        if self.__running != value:
+            self.__running = value
+            if not self.__running:
+                for sb in self.station_blocks:
+                    sb.in_station = False
     def fix_start_end(self):
         start = self.__time_of_day
         for sb in self.station_blocks:
@@ -134,6 +148,31 @@ class Program(object):
         d[INTERVAL_KEY] = int_d
         d[STATION_DURATION_KEY] = [s.serialize() for s in self.station_blocks]
         return d
+    def evaluate(self, now):
+        """returns -1, 0, 1 if the program should:
+        -1 - Too early
+         1 - Continue running
+         0 - Stop running
+        """
+        if now["day"] % 2 == 0:
+            even_odd = EVEN_INTERVAL_TYPE
+        else:
+            even_odd = ODD_INTERVAL_TYPE
+        if self.interval in even_odd_intervals and self.interval == even_odd:
+            in_day = True
+        elif self.interval == DOW_INTERVAL_TYPE:
+            in_day = now["day"] in self.dow
+        if in_day:
+            start_times = min([sb.start_time for sb in self.station_blocks])
+            end_time = max([sb.end_time for sb in self.station_blocks])
+            seconds = now["seconds_from_midnight"]
+            if seconds < start_time:
+                return TOO_EARLY
+            if seconds > end_time:
+                return STOP
+            return START
+        else:
+            return TOO_EARLY
 
 def unpack_program(d):
     if not program_validator.validate(d):

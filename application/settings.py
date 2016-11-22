@@ -192,4 +192,21 @@ class ProgramManager(object):
             return loaded
         else:
             return loaded
-
+    def running_programs(self):
+        return filter(lambda prog: prog.running, self.__programs.values())
+    def non_running_programs(self):
+        return filter(lambda prog: not prog.running, self.__programs.values())
+    def programs_for_today(self, now):
+        if now["day"] % 2 == 0:
+            even_odd = EVEN_INTERVAL_TYPE
+        else:
+            even_odd = ODD_INTERVAL_TYPE
+        dow = now["day_of_week"]
+        even_odds = filter(lambda prog: prog.interval == even_odd, self.__programs.values())
+        dows = filter(lambda prog: prog.interval == DOW_INTERVAL_TYPE and dow in prog.dow, self.__programs.values())
+        todays_programs = list()
+        todays_programs.extend(even_odds)
+        todays_programs.extend(dows)
+        return todays_programs
+    def programs_that_should_run(self, now):
+        return filter(lambda prog: prog.evaluate(now) == START, self.programs_for_today())

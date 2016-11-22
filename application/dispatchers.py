@@ -1,5 +1,6 @@
 import logging
 from core_config import pin_sr_dat,pin_sr_clk,pin_sr_oe,pin_sr_lat,gpio_pins,SIMULATE_GPIO
+from singleton import singleton
 
 try:
     import pigpio
@@ -20,6 +21,7 @@ class GenericDispatcher(object):
         self.write_register(bit_pattern)
         self.enable_shift_register()
 
+@singleton
 class GPIODispatcher(GenericDispatcher):
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -64,6 +66,7 @@ class GPIODispatcher(GenericDispatcher):
         self.gpio.write(pin_sr_lat, 1)
         self.logger.info("Wrote Bit Pattern")
 
+@singleton
 class TestDispatcher(GenericDispatcher):
     def __init__(self):
         self.logger = logging.getLogger(__name__)
