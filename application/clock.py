@@ -29,9 +29,9 @@ def __build_make_now(timef=time.time):
     
     def make_now():
         # We build now (year,month,day,day_of_week,hour,minute,second,seconds_from_midnight)
-        seconds = timef()
+        epoch_seconds = timef()
         #print seconds
-        current_time = time.localtime(seconds)
+        current_time = time.localtime(epoch_seconds)
         n = dict()
         n["year"] = current_time.tm_year
         n["month"] = current_time.tm_mon
@@ -48,6 +48,8 @@ def __build_make_now(timef=time.time):
         seconds = hrs + mins + secs
 
         n["seconds_from_midnight"] = seconds
+        
+        n["epoch"] = epoch_seconds
 
         return n
     return make_now

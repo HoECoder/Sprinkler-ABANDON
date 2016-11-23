@@ -105,12 +105,14 @@ def unpack_station_block(d):
 
 class Program(object):
     def __init__(self,
+                 manager,
                  program_id,
                  time_of_day,
                  interval,
                  dow = None,
                  is_one_shot = False,
                  station_blocks = list()):
+        self.manager = manager
         self.logger = logging.getLogger(self.__class__.__name__)
         self.program_id  = program_id
         self.__time_of_day = time_of_day
@@ -125,6 +127,8 @@ class Program(object):
         self.__dirty = False
         if not(self.station_blocks is None) and len(self.station_blocks) > 0:
             self.fix_start_end()
+        self.__evaluate_time = -1
+        self.__last_evaluation = TOO_EARLY
     @property
     def program_stations(self):
         stids = set()
@@ -154,6 +158,7 @@ class Program(object):
     def running(self, value):
         if self.__running != value:
             self.__running = value
+            self.manager.move_program(self, value)
             # self.logger.debug("%s: Program %d %s", 
                               # pretty_now(make_now()), 
                               # self.program_id, 
@@ -194,25 +199,33 @@ class Program(object):
          1 - Continue running
          0 - Stop running
         """
+        # if now["epoch"] == self.__evaluate_time:
+            # return self.__last_evaluation
         if now["day"] % 2 == 0:
             even_odd = EVEN_INTERVAL_TYPE
         else:
             even_odd = ODD_INTERVAL_TYPE
+        in_day = False
         if self.interval in even_odd_intervals and self.interval == even_odd:
             in_day = True
         elif self.interval == DOW_INTERVAL_TYPE:
             in_day = now["day"] in self.dow
+        evaluation = TOO_EARLY
         if in_day:
             seconds = now["seconds_from_midnight"]
             if seconds < self.min_start_time:
-                return TOO_EARLY
-            if seconds > self.max_end_time:
-                return STOP
-            return START
+                evaluation = TOO_EARLY
+            elif seconds > self.max_end_time:
+                evaluation =  STOP
+            else:
+                evaluation =  START
         else:
-            return TOO_EARLY
+            evaluation =  TOO_EARLY
+        # self.__last_evaluation = evaluation
+        # self.__evaluate_time = now["epoch"]
+        return evaluation
 
-def unpack_program(d):
+def unpack_program(d, manager):
     if not program_validator.validate(d):
         return None #TODO : raise an error
     program_id = d[PROGRAM_ID_KEY]
@@ -224,4 +237,4 @@ def unpack_program(d):
         days = int_d[RUN_DAYS_KEY]
     else:
         days = None
-    return Program(program_id,time_of_day,interval,dow=days,station_blocks = stations)
+    return Program(manager, program_id, time_of_day, interval, dow = days, station_blocks = stations)
