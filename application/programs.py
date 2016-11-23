@@ -127,8 +127,6 @@ class Program(object):
         self.__dirty = False
         if not(self.station_blocks is None) and len(self.station_blocks) > 0:
             self.fix_start_end()
-        self.__evaluate_time = -1
-        self.__last_evaluation = TOO_EARLY
     @property
     def program_stations(self):
         stids = set()
@@ -199,8 +197,6 @@ class Program(object):
          1 - Continue running
          0 - Stop running
         """
-        # if now["epoch"] == self.__evaluate_time:
-            # return self.__last_evaluation
         if now["day"] % 2 == 0:
             even_odd = EVEN_INTERVAL_TYPE
         else:
@@ -221,8 +217,6 @@ class Program(object):
                 evaluation =  START
         else:
             evaluation =  TOO_EARLY
-        # self.__last_evaluation = evaluation
-        # self.__evaluate_time = now["epoch"]
         return evaluation
 
 def unpack_program(d, manager):
