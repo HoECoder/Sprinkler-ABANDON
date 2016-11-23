@@ -32,8 +32,7 @@ class Controller(object):
         now = make_now()
         
         # 2. Loop over all programs for today and find those that need to start
-        for program in self.program_manager.programs_that_should_run(now):
-            program.running = True #These will now show in the running programs list
+        programs_that_should_run = self.program_manager.programs_that_should_run(now)
         
         # 3. Loop over these running programs
         for program in self.program_manager.running_programs():

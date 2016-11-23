@@ -235,4 +235,11 @@ class ProgramManager(object):
         # todays_programs.extend(dows)
         return todays_programs
     def programs_that_should_run(self, now):
-        return filter(lambda prog: prog.evaluate(now) == START, self.programs_for_today(now))
+        programs_for_today = self.programs_for_today(now)
+        these_programs = list()
+        for program in programs_for_today:
+            if START == program.evaluate(now):
+                program.running = True
+                these_programs.append(program)
+        return these_programs
+        #return filter(lambda prog: prog.evaluate(now) == START, self.programs_for_today(now))
