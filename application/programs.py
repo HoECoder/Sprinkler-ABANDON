@@ -172,6 +172,8 @@ class Program(object):
             start = sb.end_time
             if sb.end_time >= END_OF_DAY: # We force a 24 hour day
                 self.end_time = END_OF_DAY
+        self.min_start_time = min([sb.start_time for sb in self.station_blocks])
+        self.max_end_time = max([sb.end_time for sb in self.station_blocks]) 
     def serialize(self):
         int_d = {INTERVAL_TYPE_KEY : self.interval}
         if not self.interval in even_odd_intervals:
@@ -201,12 +203,10 @@ class Program(object):
         elif self.interval == DOW_INTERVAL_TYPE:
             in_day = now["day"] in self.dow
         if in_day:
-            start_time = min([sb.start_time for sb in self.station_blocks])
-            end_time = max([sb.end_time for sb in self.station_blocks])
             seconds = now["seconds_from_midnight"]
-            if seconds < start_time:
+            if seconds < self.min_start_time:
                 return TOO_EARLY
-            if seconds > end_time:
+            if seconds > self.max_end_time:
                 return STOP
             return START
         else:

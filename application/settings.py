@@ -194,7 +194,12 @@ class ProgramManager(object):
         else:
             return loaded
     def running_programs(self):
-        return filter(lambda prog: prog.running, self.__programs.values())
+        programs = list()
+        for program in self.__programs.values():
+            if program.running:
+                programs.append(program)
+        return programs
+        #return filter(lambda prog: prog.running, self.__programs.values())
     def non_running_programs(self):
         return filter(lambda prog: not prog.running, self.__programs.values())
     def programs_for_today(self, now):
