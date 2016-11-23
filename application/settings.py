@@ -215,31 +215,23 @@ class ProgramManager(object):
             self.__running_programs.remove(program)
     def non_running_programs(self):
         return filter(lambda prog: not prog.running, self.__programs.values())
-    def programs_for_today(self, now):
+    def programs_that_should_run(self, now):
         if now["day"] % 2 == 0:
             even_odd = EVEN_INTERVAL_TYPE
         else:
             even_odd = ODD_INTERVAL_TYPE
         dow = now["day_of_week"]
         even_odd_key_set = self.__key_set_helper[even_odd]
-        todays_programs = list()
-        for key in even_odd_key_set:
-            todays_programs.append(self.__programs[key])
-        for key in self.__dow_keys:
-            program = self.__programs[key]
-            if dow in program.dow:
-                todays_programs.append(program)
-        # dows = filter(lambda prog: prog.interval == DOW_INTERVAL_TYPE and dow in prog.dow, self.__programs.values())
-        # todays_programs = list()
-        # todays_programs.extend(even_odds)
-        # todays_programs.extend(dows)
-        return todays_programs
-    def programs_that_should_run(self, now):
-        programs_for_today = self.programs_for_today(now)
         these_programs = list()
-        for program in programs_for_today:
+        for program_id in even_odd_key_set:
+            program = self.__programs[program_id]
             if START == program.evaluate(now):
                 program.running = True
                 these_programs.append(program)
+        for program_id in self.__dow_keys:
+            program = self.__programs[key]
+            if dow in program.dow:
+                if START == program.evaluate(now):
+                    program.running = True
+                    these_programs.append(program)
         return these_programs
-        #return filter(lambda prog: prog.evaluate(now) == START, self.programs_for_today(now))
