@@ -49,22 +49,23 @@ class Controller(object):
                 self.dispatcher.write_pattern_to_register(self.state)
             else:
                 # 3.b We are in a running program (or a program that needs to run)
-                new_state = list(self.state)
-                station_state = dict()
+                changed_stations = dict()
                 # Loop through the stations and look for stations that fall within our times
                 for station in program.station_blocks:
                     if station.within(now):
                         #Inside a station, turn it on
-                        station_state[station.station_id] = 1
+                        bit = 1
                         station.in_station = True
                     else:
                         #Not in a station, turn it off
-                        station_state[station.station_id] = 0
+                        bit = 0
                         station.in_station = False
-                for station_id, state in station_state.items():
-                    new_state[station_id - 1] = state
-                if new_state != self.state:
-                    self.state = new_state
+                    if station.changed:
+                        station.changed = False
+                        changed_stations[station.station_id] = bit
+                if len(changed_stations) > 0:
+                    for station_id, state in changed_stations.items():
+                        self.state[station_id - 1] = state
                     self.dispatcher.write_pattern_to_register(self.state)
                 
         

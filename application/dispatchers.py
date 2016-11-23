@@ -75,6 +75,7 @@ class TestDispatcher(GenericDispatcher):
     def disable_shift_register(self):
         self.logger.info("Disabled Shift Register")
     def write_register(self, bit_pattern):
+        #print bit_pattern
         self.logger.info("Writing Bit Pattern %s", str(bit_pattern))
         # Bit bang the pattern in, top bit first
         bits = list(bit_pattern)

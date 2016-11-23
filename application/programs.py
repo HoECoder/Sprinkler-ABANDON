@@ -53,8 +53,9 @@ class StationBlock(object):
         self.__duration = duration
         self.start_time = start_time
         self.end_time = end_time
-        self.in_station = False
-        self.__dirty=False
+        self.__in_station = False
+        self.__dirty = False
+        self.__changed = False
         self.parent = parent
     @property
     def dirty(self):
@@ -74,6 +75,20 @@ class StationBlock(object):
             self.__dirty = True
             if not self.parent is None:
                 self.parent.fix_start_end()
+    @property
+    def in_station(self):
+        return self.__in_station
+    @in_station.setter
+    def in_station(self, value):
+        if self.__in_station != value:
+            self.__in_station = value
+            self.__changed = True
+    @property
+    def changed(self):
+        return self.__changed
+    @changed.setter
+    def changed(self, value):
+        self.__changed = value
     def serialize(self):
         d = OrderedDict()
         d[STATION_ID_KEY] = self.station_id
