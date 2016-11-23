@@ -29,25 +29,24 @@ def __build_make_now(timef=time.time):
     
     def make_now():
         # We build now (year,month,day,day_of_week,hour,minute,second,seconds_from_midnight)
-        seconds = timef()
+        epoch_seconds = timef()
         #print seconds
-        current_time = time.localtime(seconds)
+        current_time = time.localtime(epoch_seconds)
+        seconds_from_midnight = (current_time.tm_hour * 3600 +
+                                 current_time.tm_min * 60 +
+                                 current_time.tm_sec)
         n = dict()
-        n["year"] = current_time.tm_year
-        n["month"] = current_time.tm_mon
+
         n["day"] = current_time.tm_mday
         n["day_of_week"] = current_time.tm_wday
-        n["hour"] = current_time.tm_hour
-        n["minute"] = current_time.tm_min
-        n["second"] = current_time.tm_sec
 
-        hrs = n["hour"] * 3600
-        mins = n["minute"] * 60
-        secs = n["second"]
-
-        seconds = hrs + mins + secs
-
-        n["seconds_from_midnight"] = seconds
+        n["seconds_from_midnight"] = seconds_from_midnight
+        n["epoch"] = epoch_seconds
+        # n["year"] = current_time.tm_year
+        # n["month"] = current_time.tm_mon
+        # n["hour"] = current_time.tm_hour
+        # n["minute"] = current_time.tm_min
+        # n["second"] = current_time.tm_sec
 
         return n
     return make_now

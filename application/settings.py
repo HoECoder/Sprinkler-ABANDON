@@ -118,6 +118,13 @@ class ProgramManager(object):
         if not exists:
             os.makedirs(self.programs_path)
         self.__programs = OrderedDict()
+        self.__running_programs = set()
+        self.__even_keys = set()
+        self.__odd_keys = set()
+        self.__dow_keys = set()
+        self.__key_set_helper = {EVEN_INTERVAL_TYPE : self.__even_keys ,
+                                 ODD_INTERVAL_TYPE : self.__odd_keys ,
+                                 DOW_INTERVAL_TYPE : self.__dow_keys}
         self.program_glob = os.path.join(self.programs_path, program_name_glob)
     def __getitem__(self, key):
         return self.__programs[key]
@@ -177,15 +184,20 @@ class ProgramManager(object):
         program_paths = glob.glob(self.program_glob)
         programs = OrderedDict()
         loaded = 0
+        key_set_helper = {EVEN_INTERVAL_TYPE: self.__even_keys,
+                          ODD_INTERVAL_TYPE : self.__odd_keys,
+                          DOW_INTERVAL_TYPE : self.__dow_keys}
         for pp in program_paths:
             try:
                 program_file = open(pp,"rb")
                 program_d = json.load(program_file)
-                program = unpack_program(program_d)
+                program = unpack_program(program_d, self)
                 programs[program.program_id] = program
                 program_file.close()
                 del program_file
                 loaded += 1
+                key_set = self.__key_set_helper[program.interval]
+                key_set.add(program.program_id)
             except IOError, e:
                 print str(e)
         if len(programs) > 0:
@@ -194,25 +206,32 @@ class ProgramManager(object):
         else:
             return loaded
     def running_programs(self):
-        programs = list()
-        for program in self.__programs.values():
-            if program.running:
-                programs.append(program)
-        return programs
+        return set(self.__running_programs)
         #return filter(lambda prog: prog.running, self.__programs.values())
+    def move_program(self, program, running):
+        if running:
+            self.__running_programs.add(program)
+        else:
+            self.__running_programs.remove(program)
     def non_running_programs(self):
         return filter(lambda prog: not prog.running, self.__programs.values())
-    def programs_for_today(self, now):
+    def programs_that_should_run(self, now):
         if now["day"] % 2 == 0:
             even_odd = EVEN_INTERVAL_TYPE
         else:
             even_odd = ODD_INTERVAL_TYPE
         dow = now["day_of_week"]
-        even_odds = filter(lambda prog: prog.interval == even_odd, self.__programs.values())
-        dows = filter(lambda prog: prog.interval == DOW_INTERVAL_TYPE and dow in prog.dow, self.__programs.values())
-        todays_programs = list()
-        todays_programs.extend(even_odds)
-        todays_programs.extend(dows)
-        return todays_programs
-    def programs_that_should_run(self, now):
-        return filter(lambda prog: prog.evaluate(now) == START, self.programs_for_today(now))
+        even_odd_key_set = self.__key_set_helper[even_odd]
+        these_programs = list()
+        for program_id in even_odd_key_set:
+            program = self.__programs[program_id]
+            if START == program.evaluate(now):
+                program.running = True
+                these_programs.append(program)
+        for program_id in self.__dow_keys:
+            program = self.__programs[key]
+            if dow in program.dow:
+                if START == program.evaluate(now):
+                    program.running = True
+                    these_programs.append(program)
+        return these_programs
