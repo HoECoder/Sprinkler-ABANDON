@@ -1,6 +1,7 @@
-
+import logging
+from clock import clock_parse, pretty_now, make_now
 from collections import OrderedDict
-from core_config import interval_types
+from core_config import interval_types, END_OF_DAY, TIME_DUMP_FORMAT, STATION_ON_OFF
 from settings_keys import *
 import cerberus
 
@@ -31,7 +32,7 @@ station_block_schema = {STATION_ID_KEY : {"type" : "integer",
                                         "min" : 0}}
 program_schema = {PROGRAM_ID_KEY : {"type" : "integer",
                                     "min" : 0},
-                  TIME_OF_DAY_KEY : {"type" : "integer",
+                  TIME_OF_DAY_KEY : {"type" : "string",
                                      "min" : 0},
                   INTERVAL_KEY : {"type":"dict",
                                   "validator":validate_interval},
@@ -78,6 +79,9 @@ class StationBlock(object):
         d[STATION_ID_KEY] = self.station_id
         d[DURATION_KEY] = self.duration
         return d
+    def within(self, now):
+        seconds = now["seconds_from_midnight"]
+        return self.start_time <= seconds and seconds < self.end_time
 
 def unpack_station_block(d):
     s = StationBlock(d[STATION_ID_KEY],d[DURATION_KEY])
@@ -92,6 +96,7 @@ class Program(object):
                  dow = None,
                  is_one_shot = False,
                  station_blocks = list()):
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.program_id  = program_id
         self.__time_of_day = time_of_day
         self.__running = False
@@ -105,6 +110,12 @@ class Program(object):
         self.__dirty = False
         if not(self.station_blocks is None) and len(self.station_blocks) > 0:
             self.fix_start_end()
+    @property
+    def program_stations(self):
+        stids = set()
+        for sb in self.station_blocks:
+            stids.add(sb.station_id)
+        return list(stids)
     @property
     def dirty(self):
         return self.__dirty or reduce(lambda x,y: x or y.dirty, self.station_blocks,False)
@@ -128,15 +139,24 @@ class Program(object):
     def running(self, value):
         if self.__running != value:
             self.__running = value
+            # self.logger.debug("%s: Program %d %s", 
+                              # pretty_now(make_now()), 
+                              # self.program_id, 
+                              # STATION_ON_OFF[value])
+            #print "Program %s" % (STATION_ON_OFF[value])
             if not self.__running:
                 for sb in self.station_blocks:
                     sb.in_station = False
     def fix_start_end(self):
         start = self.__time_of_day
         for sb in self.station_blocks:
+            if start >= END_OF_DAY: # We force a 24 hour day
+                start = END_OF_DAY
             sb.start_time = start
             sb.end_time = start + sb.duration
             start = sb.end_time
+            if sb.end_time >= END_OF_DAY: # We force a 24 hour day
+                self.end_time = END_OF_DAY
     def serialize(self):
         int_d = {INTERVAL_TYPE_KEY : self.interval}
         if not self.interval in even_odd_intervals:
@@ -144,7 +164,10 @@ class Program(object):
         d = OrderedDict()
         
         d[PROGRAM_ID_KEY] = self.program_id
-        d[TIME_OF_DAY_KEY] = self.time_of_day
+        hrs = self.time_of_day / 3600
+        mins = (self.time_of_day - (hrs * 3600)) / 60
+        secs = (self.time_of_day - (hrs * 3600) - (mins * 60))
+        d[TIME_OF_DAY_KEY] = TIME_DUMP_FORMAT % (hrs, mins, secs)
         d[INTERVAL_KEY] = int_d
         d[STATION_DURATION_KEY] = [s.serialize() for s in self.station_blocks]
         return d
@@ -163,7 +186,7 @@ class Program(object):
         elif self.interval == DOW_INTERVAL_TYPE:
             in_day = now["day"] in self.dow
         if in_day:
-            start_times = min([sb.start_time for sb in self.station_blocks])
+            start_time = min([sb.start_time for sb in self.station_blocks])
             end_time = max([sb.end_time for sb in self.station_blocks])
             seconds = now["seconds_from_midnight"]
             if seconds < start_time:
@@ -178,7 +201,7 @@ def unpack_program(d):
     if not program_validator.validate(d):
         return None #TODO : raise an error
     program_id = d[PROGRAM_ID_KEY]
-    time_of_day = d[TIME_OF_DAY_KEY]
+    time_of_day = clock_parse(d[TIME_OF_DAY_KEY])
     int_d = d[INTERVAL_KEY]
     stations = [unpack_station_block(s) for s in d[STATION_DURATION_KEY]]
     interval = int_d["type"]

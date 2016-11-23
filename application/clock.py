@@ -1,6 +1,6 @@
 
 from singleton import singleton
-from core_config import SIMULATE_TIME
+from core_config import SIMULATE_TIME, TIME_PARSE_FORMAT
 import time
 
 @singleton
@@ -16,6 +16,14 @@ class SimulationClock(object):
         self.ticker += self.tick_unit
     def time(self):
         return self.ticker
+    def reset_to_today(self):
+        t = time.localtime()
+        t = [x for x in t]
+        t[3] = 0
+        t[4] = 0
+        t[5] = 0
+        t = time.mktime(t)
+        self.ticker = t
 
 def __build_make_now(timef=time.time):
     
@@ -45,7 +53,7 @@ def __build_make_now(timef=time.time):
     return make_now
 
 def pretty_now(now):
-    s = "%d/%d/%d %2d:%2d:%2d %d"
+    s = "%d/%d/%d %02d:%02d:%02d %d"
     r = s %(now['year'],
                 now['month'],
                 now['day'],
@@ -54,6 +62,17 @@ def pretty_now(now):
                 now['second'],
                 now['seconds_from_midnight'])
     return r
+
+def clock_parse(s):
+    try:
+        t = time.strptime(s, TIME_PARSE_FORMAT)
+        hrs = t.tm_hour
+        mins = t.tm_min
+        secs = t.tm_sec
+        seconds_from_midnight = hrs * 3600 + mins * 60 + secs
+        return seconds_from_midnight
+    except ValueError:
+        return -1
 
 # Setup for simulation mode
 if SIMULATE_TIME:

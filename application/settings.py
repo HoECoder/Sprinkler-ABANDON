@@ -10,6 +10,7 @@ from settings_keys import *
 from programs import *
 from singleton import *
 from utility import find_key_gap
+from clock import pretty_now
 
 boolean_conf_keys = [RAIN_SENSOR_KEY,
                      INVERT_RAIN_SENSOR_KEY,
@@ -209,4 +210,4 @@ class ProgramManager(object):
         todays_programs.extend(dows)
         return todays_programs
     def programs_that_should_run(self, now):
-        return filter(lambda prog: prog.evaluate(now) == START, self.programs_for_today())
+        return filter(lambda prog: prog.evaluate(now) == START, self.programs_for_today(now))

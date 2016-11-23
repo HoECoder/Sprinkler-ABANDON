@@ -24,7 +24,7 @@ class GenericDispatcher(object):
 @singleton
 class GPIODispatcher(GenericDispatcher):
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.gpio = pigpio.pi()
         if not self.gpio is None:
             self.__setup_pins()
@@ -69,7 +69,7 @@ class GPIODispatcher(GenericDispatcher):
 @singleton
 class TestDispatcher(GenericDispatcher):
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
     def enable_shift_register(self):
         self.logger.info("Enabled Shift Register")
     def disable_shift_register(self):

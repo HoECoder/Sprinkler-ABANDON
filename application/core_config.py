@@ -64,11 +64,21 @@ gpio_pin_help = {pin_sr_dat : "SR Data",
 interval_types = [EVEN_INTERVAL_TYPE,
                   ODD_INTERVAL_TYPE,
                   DOW_INTERVAL_TYPE]
-                          
+
+# End of Day
+END_OF_DAY = 86400
+# Format for parsing times in programs
+TIME_PARSE_FORMAT = "%H:%M:%S"
+TIME_DUMP_FORMAT = "%02d:%02d:%02d"
+#
+STATION_ON_TEXT = "On"
+STATION_OFF_TEXT = "Off"
+STATION_ON_OFF = {True: STATION_ON_TEXT,
+                  False: STATION_OFF_TEXT}
 # Simulation parameters
 SIMULATE_GPIO = True
 # Fake a clock for testing purposes, goes as quickly as possible
 # If set, will force SIMULATE_GPIO to True, for safety reasons
-SIMULATE_TIME = False
+SIMULATE_TIME = True
 if SIMULATE_TIME:
     SIMULATE_GPIO = True
