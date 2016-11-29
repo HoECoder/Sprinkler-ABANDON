@@ -194,6 +194,7 @@ class Program(object):
     def enabled(self, value):
         if self.__enabled != value:
             self.__enabled = value
+            self.__dirty = True
             if not self.__enabled:
                 for station in self.station_blocks:
                     station.in_station = False
