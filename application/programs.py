@@ -42,6 +42,31 @@ program_schema = {PROGRAM_ID_KEY : {"type" : "integer",
 
 program_validator = cerberus.Validator(program_schema,allow_unknown = True)
 
+def unpack_station_block(d):
+    s = StationBlock(d[STATION_ID_KEY],d[DURATION_KEY])
+    return s
+
+def unpack_program(d, manager):
+    if not program_validator.validate(d):
+        return None #TODO : raise an error
+    program_id = d[PROGRAM_ID_KEY]
+    time_of_day = clock_parse(d[TIME_OF_DAY_KEY])
+    int_d = d[INTERVAL_KEY]
+    stations = [unpack_station_block(s) for s in d[STATION_DURATION_KEY]]
+    interval = int_d["type"]
+    enabled = d.get(ENABLED_DISABLED_KEY, True)
+    if not interval in even_odd_intervals:
+        days = int_d[RUN_DAYS_KEY]
+    else:
+        days = None
+    return Program(manager,
+                   program_id,
+                   time_of_day,
+                   interval,
+                   enabled,
+                   dow = days,
+                   station_blocks = stations)
+
 class StationBlock(object):
     def __init__(self,
                  station_id,
@@ -98,17 +123,13 @@ class StationBlock(object):
         seconds = now["seconds_from_midnight"]
         return self.start_time <= seconds and seconds < self.end_time
 
-def unpack_station_block(d):
-    s = StationBlock(d[STATION_ID_KEY],d[DURATION_KEY])
-    return s
-
-
 class Program(object):
     def __init__(self,
                  manager,
                  program_id,
                  time_of_day,
                  interval,
+                 enabled = True,
                  dow = None,
                  is_one_shot = False,
                  station_blocks = list()):
@@ -117,6 +138,7 @@ class Program(object):
         self.program_id  = program_id
         self.__time_of_day = time_of_day
         self.__running = False
+        self.__enabled = enabled
         self.interval = interval
         self.dow = dow
         self.is_one_shot = is_one_shot
@@ -165,6 +187,16 @@ class Program(object):
             if not self.__running:
                 for sb in self.station_blocks:
                     sb.in_station = False
+    @property
+    def enabled(self):
+        return self.__enabled
+    @enabled.setter
+    def enabled(self, value):
+        if self.__enabled != value:
+            self.__enabled = value
+            if not self.__enabled:
+                for station in self.station_blocks:
+                    station.in_station = False
     def fix_start_end(self):
         start = self.__time_of_day
         for sb in self.station_blocks:
@@ -184,6 +216,7 @@ class Program(object):
         d = OrderedDict()
         
         d[PROGRAM_ID_KEY] = self.program_id
+        d[ENABLED_DISABLED_KEY] = self.__enabled
         hrs = self.time_of_day / 3600
         mins = (self.time_of_day - (hrs * 3600)) / 60
         secs = (self.time_of_day - (hrs * 3600) - (mins * 60))
@@ -218,17 +251,3 @@ class Program(object):
         else:
             evaluation =  TOO_EARLY
         return evaluation
-
-def unpack_program(d, manager):
-    if not program_validator.validate(d):
-        return None #TODO : raise an error
-    program_id = d[PROGRAM_ID_KEY]
-    time_of_day = clock_parse(d[TIME_OF_DAY_KEY])
-    int_d = d[INTERVAL_KEY]
-    stations = [unpack_station_block(s) for s in d[STATION_DURATION_KEY]]
-    interval = int_d["type"]
-    if not interval in even_odd_intervals:
-        days = int_d[RUN_DAYS_KEY]
-    else:
-        days = None
-    return Program(manager, program_id, time_of_day, interval, dow = days, station_blocks = stations)

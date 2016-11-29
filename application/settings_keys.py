@@ -26,6 +26,7 @@ STATION_DURATION_KEY = "station_duration"
 STATION_ID_KEY = "stid"
 DURATION_KEY = "duration"
 IN_STATION_KEY = "in_station"
+ENABLED_DISABLED_KEY = "enabled"
 
 EVEN_INTERVAL_TYPE = "even"
 ODD_INTERVAL_TYPE = "odd"

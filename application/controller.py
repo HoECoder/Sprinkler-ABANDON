@@ -44,22 +44,28 @@ class Controller(object):
                 program.running = False
                 # Dispatch a Stop
                 stations = program.program_stations
+                state = list(self.state)
                 for station in stations:
-                    self.state[station - 1] = 0
+                    state[station - 1] = 0
+                if state != self.state:
+                    sel.state = state
                 self.dispatcher.write_pattern_to_register(self.state)
             else:
                 # 3.b We are in a running program (or a program that needs to run)
                 changed_stations = dict()
                 # Loop through the stations and look for stations that fall within our times
                 for station in program.station_blocks:
-                    if station.within(now):
-                        #Inside a station, turn it on
-                        bit = 1
-                        station.in_station = True
-                    else:
-                        #Not in a station, turn it off
+                    if program.enabled:
+                        if station.within(now):
+                            #Inside a station, turn it on
+                            bit = 1
+                            station.in_station = True
+                        else:
+                            #Not in a station, turn it off
+                            bit = 0
+                            station.in_station = False
+                    else: # Program is disabled, disabling a program sets all stations to in_station = False and changed = True
                         bit = 0
-                        station.in_station = False
                     if station.changed:
                         station.changed = False
                         changed_stations[station.station_id] = bit
