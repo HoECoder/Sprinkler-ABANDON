@@ -55,7 +55,7 @@ class Controller(object):
                 changed_stations = dict()
                 # Loop through the stations and look for stations that fall within our times
                 for station in program.station_blocks:
-                    if program.enabled:
+                    if program.enabled: # Only check on enabled programs
                         if station.within(now):
                             #Inside a station, turn it on
                             bit = 1
@@ -64,7 +64,9 @@ class Controller(object):
                             #Not in a station, turn it off
                             bit = 0
                             station.in_station = False
-                    else: # Program is disabled, disabling a program sets all stations to in_station = False and changed = True
+                    else: 
+                        # Program is disabled, disabling a program sets all stations 
+                        # to in_station = False and changed = True
                         bit = 0
                     if station.changed:
                         station.changed = False
