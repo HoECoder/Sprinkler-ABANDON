@@ -5,6 +5,7 @@ from settings_keys import *
 from clock import *
 from dispatchers import *
 from settings import *
+from program_manager import *
 from programs import *
 
 @singleton
