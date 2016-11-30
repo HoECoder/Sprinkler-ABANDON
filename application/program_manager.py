@@ -19,6 +19,7 @@ class ProgramManager(object):
         if not exists:
             os.makedirs(self.programs_path)
         self.__programs = OrderedDict()
+        self.__program_paths = OrderedDict()
         self.__running_programs = set()
         self.__even_keys = set()
         self.__odd_keys = set()
@@ -89,18 +90,22 @@ class ProgramManager(object):
                           ODD_INTERVAL_TYPE : self.__odd_keys,
                           DOW_INTERVAL_TYPE : self.__dow_keys}
         for pp in program_paths:
-            try:
-                program_file = open(pp,"rb")
-                program_d = json.load(program_file)
-                program = unpack_program(program_d, self)
-                programs[program.program_id] = program
-                program_file.close()
-                del program_file
-                loaded += 1
-                key_set = self.__key_set_helper[program.interval]
-                key_set.add(program.program_id)
-            except IOError, e:
-                print str(e)
+            old_file_time = self.__program_paths.get(pp, -1.0)
+            new_file_time = os.stat(pp).st_mtime
+            if old_file_time < new_file_time:
+                try:
+                    program_file = open(pp,"rb")
+                    program_d = json.load(program_file)
+                    program = unpack_program(program_d, self)
+                    programs[program.program_id] = program
+                    program_file.close()
+                    del program_file
+                    loaded += 1
+                    key_set = self.__key_set_helper[program.interval]
+                    key_set.add(program.program_id)
+                    self.__program_paths[pp] = new_file_time
+                except IOError, e:
+                    print str(e)
         if len(programs) > 0:
             self.__programs = programs
             return loaded

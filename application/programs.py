@@ -32,10 +32,10 @@ station_block_schema = {STATION_ID_KEY : {"type" : "integer",
                                         "min" : 0}}
 program_schema = {PROGRAM_ID_KEY : {"type" : "integer",
                                     "min" : 0},
-                  TIME_OF_DAY_KEY : {"type" : "string",
-                                     "min" : 0},
+                  TIME_OF_DAY_KEY : {"type" : "string"},
                   INTERVAL_KEY : {"type":"dict",
                                   "validator":validate_interval},
+                  PROGRAM_NAME_KEY: {"type" : "string"},
                   STATION_DURATION_KEY : {"type" : "list",
                                           "schema" : {"type" : "dict",
                                                       "schema" : station_block_schema}}}
@@ -55,12 +55,14 @@ def unpack_program(d, manager):
     stations = [unpack_station_block(s) for s in d[STATION_DURATION_KEY]]
     interval = int_d["type"]
     enabled = d.get(ENABLED_DISABLED_KEY, True)
+    program_name = d.get(PROGRAM_NAME_KEY,"Program %d" % program_id)
     if not interval in even_odd_intervals:
         days = int_d[RUN_DAYS_KEY]
     else:
         days = None
     return Program(manager,
                    program_id,
+                   program_name,
                    time_of_day,
                    interval,
                    enabled,
@@ -127,6 +129,7 @@ class Program(object):
     def __init__(self,
                  manager,
                  program_id,
+                 program_name,
                  time_of_day,
                  interval,
                  enabled = True,
@@ -134,6 +137,7 @@ class Program(object):
                  is_one_shot = False,
                  station_blocks = list()):
         self.manager = manager
+        self.program_name = program_name
         self.logger = logging.getLogger(self.__class__.__name__)
         self.program_id  = program_id
         self.__time_of_day = time_of_day
@@ -217,6 +221,7 @@ class Program(object):
         d = OrderedDict()
         
         d[PROGRAM_ID_KEY] = self.program_id
+        d[PROGRAM_NAME_KEY] = self.program_name
         d[ENABLED_DISABLED_KEY] = self.__enabled
         hrs = self.time_of_day / 3600
         mins = (self.time_of_day - (hrs * 3600)) / 60

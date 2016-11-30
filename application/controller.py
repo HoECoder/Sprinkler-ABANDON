@@ -18,7 +18,7 @@ class Controller(object):
         self.dispatcher = DefaultDispatcher()
         self.__prepare_state()
     def __prepare_state(self):
-        station_count = self.settings['stations available']
+        station_count = self.settings[STATIONS_AVAIL_KEY]
         self.state = [0 for x in xrange(station_count)]
         self.full_stop_state = [0 for x in xrange(station_count)]
     def on_tick(self):
@@ -50,8 +50,7 @@ class Controller(object):
                 if state != self.state:
                     sel.state = state
                 self.dispatcher.write_pattern_to_register(self.state)
-            else:
-                # 3.b We are in a running program (or a program that needs to run)
+            else: # 3.b We are in a running program (or a program that needs to run)
                 changed_stations = dict()
                 # Loop through the stations and look for stations that fall within our times
                 for station in program.station_blocks:

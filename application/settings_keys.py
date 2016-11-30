@@ -16,6 +16,7 @@ IGNORE_RAIN_KEY = 'ignore rain sensor'
 NEED_MASTER_KEY = 'need master'
 STATION_LIST_KEY = 'station list'
 PROGRAM_ID_KEY = "pid"
+PROGRAM_NAME_KEY = "name"
 TIME_OF_DAY_KEY = "time_of_day"
 INTERVAL_KEY = "interval"
 INTERVAL_TYPE_KEY = "type"
