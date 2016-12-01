@@ -27,6 +27,8 @@ if __name__ == "__main__":
     total_start = time.time()
     d2d_start = 0
     d2d_end = 0
+    changes = 0
+    new_changes = 0
     try:
         settings.load()
         program_manager.load_programs()
@@ -34,19 +36,24 @@ if __name__ == "__main__":
         sqlite_program_log.load(r"D:\controller\t.db3")
         sqlite_program_log.register_stations(settings.stations.values())
         sqlite_program_log.register_programs(program_manager.values())
-        
+        changes = sqlite_program_log.conn.total_changes
         i = 0
         day = 24*3600
-        run_time = day * 30
+        run_time = day * 365 * 4
         while i < run_time:
             if i % day == 0:
                 print "Day %d" % ((i/day) + 1)
             controller.on_tick()
-            if i > 1 and i % 10 == 0:
-                sqlite_program_log.persist()
+            new_changes = sqlite_program_log.conn.total_changes
+            if new_changes != changes:
+                
+                #print "\t%d new changes" % (new_changes-changes)
+                changes = new_changes
             i += 1
             s.tick()
+        sqlite_program_log.persist()
     except KeyboardInterrupt:
         print "\nCTRL-C caught, Shutdown"
+        sqlite_program_log.persist()
     total_end = time.time()
     print "Run time : %f" % (total_end-total_start)

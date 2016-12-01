@@ -29,12 +29,17 @@ class SQLiteProgramLog(object):
         self.conn.commit()
         
     def __enter_programs(self, programs):
-        inserts = list()
+        programs_inserts = list()
+        program_stations_inserts = list()
         for program in programs:
             tod = format_time_of_day(program.time_of_day)
             insert = (program.program_id, program.program_name, sql_interval_map[program.interval], tod)
-            inserts.append(insert)
-        self.conn.executemany(program_insert_string, inserts)
+            programs_inserts.append(insert)
+            for station in program.station_blocks:
+                insert = (program.program_id, station.station_id, station.duration)
+                program_stations_inserts.append(insert)
+        self.conn.executemany(program_insert_string, programs_inserts)
+        self.conn.executemany(program_stations_insert, program_stations_inserts)
         self.conn.commit()
         
     def __enter_stations(self, stations):
