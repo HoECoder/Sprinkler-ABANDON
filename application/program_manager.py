@@ -10,8 +10,8 @@ from programs import *
 from singleton import *
 from utility import find_key_gap
 from clock import pretty_now
+from program_log import sqlite_program_log
 
-@singleton # ProgramManager is a Singleton  
 class ProgramManager(object):
     def __init__(self, programs_path = programs_path):
         self.programs_path = programs_path
@@ -117,8 +117,10 @@ class ProgramManager(object):
     def move_program(self, program, running):
         if running:
             self.__running_programs.add(program)
+            sqlite_program_log.log_program_start(program)
         else:
             self.__running_programs.remove(program)
+            sqlite_program_log.log_program_stop(program)
     def non_running_programs(self):
         return filter(lambda prog: not prog.running, self.__programs.values())
     def programs_that_should_run(self, now):
@@ -141,3 +143,5 @@ class ProgramManager(object):
                     program.running = True
                     these_programs.append(program)
         return these_programs
+
+program_manager = ProgramManager()
