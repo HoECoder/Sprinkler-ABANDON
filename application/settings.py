@@ -34,7 +34,6 @@ class Station(object):
         self.need_master = need_master
         
 
-@singleton
 class Settings(object):
     def __init__(self, config_file = master_path):
         self.settings_file_name = config_file
@@ -63,6 +62,12 @@ class Settings(object):
         return self.__settings.items()
     def __len__(self):
         return len(self.__settings)
+    @property
+    def stations(self):
+        if self.__settings is None:
+            raise AttributeError("Settings Not Initialized")
+        stations = self.__settings[STATION_LIST_KEY]
+        return stations
     def load(self):
         new_file_time = os.stat(self.settings_file_name).st_mtime
         if self.__file_time < new_file_time:
@@ -133,3 +138,5 @@ class Settings(object):
         fi.close()
         del fi
         self.dirty = False
+
+settings = Settings()

@@ -1,9 +1,10 @@
 import logging
-from clock import clock_parse, pretty_now, make_now
+from clock import clock_parse, pretty_now, make_now, format_time_of_day
 from collections import OrderedDict
 from core_config import interval_types, END_OF_DAY, TIME_DUMP_FORMAT, STATION_ON_OFF
 from settings_keys import *
 import cerberus
+from program_log import sqlite_program_log
 
 even_odd_intervals = [EVEN_INTERVAL_TYPE,
                       ODD_INTERVAL_TYPE]
@@ -110,6 +111,10 @@ class StationBlock(object):
         if self.__in_station != value:
             self.__in_station = value
             self.__changed = True
+            if self.__in_station:
+                sqlite_program_log.log_station_start(self.parent, self.station_id)
+            else:
+                sqlite_program_log.log_station_stop(self.parent, self.station_id)
     @property
     def changed(self):
         return self.__changed
@@ -223,10 +228,7 @@ class Program(object):
         d[PROGRAM_ID_KEY] = self.program_id
         d[PROGRAM_NAME_KEY] = self.program_name
         d[ENABLED_DISABLED_KEY] = self.__enabled
-        hrs = self.time_of_day / 3600
-        mins = (self.time_of_day - (hrs * 3600)) / 60
-        secs = (self.time_of_day - (hrs * 3600) - (mins * 60))
-        d[TIME_OF_DAY_KEY] = TIME_DUMP_FORMAT % (hrs, mins, secs)
+        d[TIME_OF_DAY_KEY] = format_time_of_day(self.time_of_day)
         d[INTERVAL_KEY] = int_d
         d[STATION_DURATION_KEY] = [s.serialize() for s in self.station_blocks]
         return d

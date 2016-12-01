@@ -7,18 +7,18 @@ from dispatchers import *
 from settings import *
 from program_manager import *
 from programs import *
+from program_log import sqlite_program_log
 
-@singleton
 class Controller(object):
     def __init__(self, dispatch_class = DefaultDispatcher):
-        self.program_manager = ProgramManager()
-        self.settings = Settings()
-        self.settings.load()
-        self.program_manager.load_programs()
+        # self.program_manager = ProgramManager()
+        # self.settings = Settings()
+        # self.settings.load()
+        # self.program_manager.load_programs()
         self.dispatcher = DefaultDispatcher()
         self.__prepare_state()
     def __prepare_state(self):
-        station_count = self.settings[STATIONS_AVAIL_KEY]
+        station_count = settings[STATIONS_AVAIL_KEY]
         self.state = [0 for x in xrange(station_count)]
         self.full_stop_state = [0 for x in xrange(station_count)]
     def on_tick(self):
@@ -33,10 +33,10 @@ class Controller(object):
         now = make_now()
         
         # 2. Loop over all programs for today and find those that need to start
-        programs_that_should_run = self.program_manager.programs_that_should_run(now)
+        programs_that_should_run = program_manager.programs_that_should_run(now)
         
         # 3. Loop over these running programs
-        for program in self.program_manager.running_programs():
+        for program in program_manager.running_programs():
             value = program.evaluate(now)
             # 3.a. Stop expired programs
             if value in [TOO_EARLY, STOP]: # If we are running and we get either, full stop
@@ -74,5 +74,7 @@ class Controller(object):
                     for station_id, state in changed_stations.items():
                         self.state[station_id - 1] = state
                     self.dispatcher.write_pattern_to_register(self.state)
+        
+        #sqlite_program_log.persist()
                 
         
