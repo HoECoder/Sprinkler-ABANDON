@@ -1,9 +1,10 @@
 import logging
-from clock import clock_parse, pretty_now, make_now
+from clock import clock_parse, pretty_now, make_now, format_time_of_day
 from collections import OrderedDict
 from core_config import interval_types, END_OF_DAY, TIME_DUMP_FORMAT, STATION_ON_OFF
 from settings_keys import *
 import cerberus
+from program_log import sqlite_program_log
 
 even_odd_intervals = [EVEN_INTERVAL_TYPE,
                       ODD_INTERVAL_TYPE]
@@ -32,15 +33,42 @@ station_block_schema = {STATION_ID_KEY : {"type" : "integer",
                                         "min" : 0}}
 program_schema = {PROGRAM_ID_KEY : {"type" : "integer",
                                     "min" : 0},
-                  TIME_OF_DAY_KEY : {"type" : "string",
-                                     "min" : 0},
+                  TIME_OF_DAY_KEY : {"type" : "string"},
                   INTERVAL_KEY : {"type":"dict",
                                   "validator":validate_interval},
+                  PROGRAM_NAME_KEY: {"type" : "string"},
                   STATION_DURATION_KEY : {"type" : "list",
                                           "schema" : {"type" : "dict",
                                                       "schema" : station_block_schema}}}
 
 program_validator = cerberus.Validator(program_schema,allow_unknown = True)
+
+def unpack_station_block(d):
+    s = StationBlock(d[STATION_ID_KEY],d[DURATION_KEY])
+    return s
+
+def unpack_program(d, manager):
+    if not program_validator.validate(d):
+        return None #TODO : raise an error
+    program_id = d[PROGRAM_ID_KEY]
+    time_of_day = clock_parse(d[TIME_OF_DAY_KEY])
+    int_d = d[INTERVAL_KEY]
+    stations = [unpack_station_block(s) for s in d[STATION_DURATION_KEY]]
+    interval = int_d["type"]
+    enabled = d.get(ENABLED_DISABLED_KEY, True)
+    program_name = d.get(PROGRAM_NAME_KEY,"Program %d" % program_id)
+    if not interval in even_odd_intervals:
+        days = int_d[RUN_DAYS_KEY]
+    else:
+        days = None
+    return Program(manager,
+                   program_id,
+                   program_name,
+                   time_of_day,
+                   interval,
+                   enabled,
+                   dow = days,
+                   station_blocks = stations)
 
 class StationBlock(object):
     def __init__(self,
@@ -83,6 +111,10 @@ class StationBlock(object):
         if self.__in_station != value:
             self.__in_station = value
             self.__changed = True
+            if self.__in_station:
+                sqlite_program_log.log_station_start(self.parent, self.station_id)
+            else:
+                sqlite_program_log.log_station_stop(self.parent, self.station_id)
     @property
     def changed(self):
         return self.__changed
@@ -98,25 +130,24 @@ class StationBlock(object):
         seconds = now["seconds_from_midnight"]
         return self.start_time <= seconds and seconds < self.end_time
 
-def unpack_station_block(d):
-    s = StationBlock(d[STATION_ID_KEY],d[DURATION_KEY])
-    return s
-
-
 class Program(object):
     def __init__(self,
                  manager,
                  program_id,
+                 program_name,
                  time_of_day,
                  interval,
+                 enabled = True,
                  dow = None,
                  is_one_shot = False,
                  station_blocks = list()):
         self.manager = manager
+        self.program_name = program_name
         self.logger = logging.getLogger(self.__class__.__name__)
         self.program_id  = program_id
         self.__time_of_day = time_of_day
         self.__running = False
+        self.__enabled = enabled
         self.interval = interval
         self.dow = dow
         self.is_one_shot = is_one_shot
@@ -165,6 +196,17 @@ class Program(object):
             if not self.__running:
                 for sb in self.station_blocks:
                     sb.in_station = False
+    @property
+    def enabled(self):
+        return self.__enabled
+    @enabled.setter
+    def enabled(self, value):
+        if self.__enabled != value:
+            self.__enabled = value
+            self.__dirty = True
+            if not self.__enabled:
+                for station in self.station_blocks:
+                    station.in_station = False
     def fix_start_end(self):
         start = self.__time_of_day
         for sb in self.station_blocks:
@@ -184,10 +226,9 @@ class Program(object):
         d = OrderedDict()
         
         d[PROGRAM_ID_KEY] = self.program_id
-        hrs = self.time_of_day / 3600
-        mins = (self.time_of_day - (hrs * 3600)) / 60
-        secs = (self.time_of_day - (hrs * 3600) - (mins * 60))
-        d[TIME_OF_DAY_KEY] = TIME_DUMP_FORMAT % (hrs, mins, secs)
+        d[PROGRAM_NAME_KEY] = self.program_name
+        d[ENABLED_DISABLED_KEY] = self.__enabled
+        d[TIME_OF_DAY_KEY] = format_time_of_day(self.time_of_day)
         d[INTERVAL_KEY] = int_d
         d[STATION_DURATION_KEY] = [s.serialize() for s in self.station_blocks]
         return d
@@ -218,17 +259,3 @@ class Program(object):
         else:
             evaluation =  TOO_EARLY
         return evaluation
-
-def unpack_program(d, manager):
-    if not program_validator.validate(d):
-        return None #TODO : raise an error
-    program_id = d[PROGRAM_ID_KEY]
-    time_of_day = clock_parse(d[TIME_OF_DAY_KEY])
-    int_d = d[INTERVAL_KEY]
-    stations = [unpack_station_block(s) for s in d[STATION_DURATION_KEY]]
-    interval = int_d["type"]
-    if not interval in even_odd_intervals:
-        days = int_d[RUN_DAYS_KEY]
-    else:
-        days = None
-    return Program(manager, program_id, time_of_day, interval, dow = days, station_blocks = stations)

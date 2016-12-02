@@ -1,9 +1,8 @@
 
 from singleton import singleton
-from core_config import SIMULATE_TIME, TIME_PARSE_FORMAT
+from core_config import SIMULATE_TIME, TIME_PARSE_FORMAT, TIME_DUMP_FORMAT
 import time
 
-@singleton
 class SimulationClock(object):
     def __init__(self,start_time=None):
         self.tick_unit = 1
@@ -73,10 +72,17 @@ def clock_parse(s):
     except ValueError:
         return -1
 
+def format_time_of_day(time_float):
+    hours = time_float / 3600
+    minutes = (time_float - (hours * 3600)) / 60
+    seconds = (time_float - (hours * 3600) - (minutes * 60))
+    
+    return TIME_DUMP_FORMAT % (hours, minutes, seconds)
+
 # Setup for simulation mode
+sim_clock = SimulationClock()
 if SIMULATE_TIME:
-    __sim_clock = SimulationClock()
-    time_function=__sim_clock.time
+    time_function = sim_clock.time
 else:
     time_function=time.time
 
