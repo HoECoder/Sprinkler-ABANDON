@@ -33,6 +33,7 @@ if __name__ == "__main__":
         settings.load()
         program_manager.load_programs()
         controller = Controller()
+        program_manager.bind_stations(controller.stations)
         sqlite_program_log.load(r"D:\controller\t.db3")
         sqlite_program_log.register_stations(settings.stations.values())
         sqlite_program_log.register_programs(program_manager.values())

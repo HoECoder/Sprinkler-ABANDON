@@ -15,12 +15,17 @@ class Controller(object):
         # self.settings = Settings()
         # self.settings.load()
         # self.program_manager.load_programs()
+        self.__stations = None
         self.dispatcher = DefaultDispatcher()
         self.__prepare_state()
     def __prepare_state(self):
         station_count = settings[STATIONS_AVAIL_KEY]
         self.state = [0 for x in xrange(station_count)]
         self.full_stop_state = [0 for x in xrange(station_count)]
+        self.__stations = settings[STATION_LIST_KEY]
+    @property
+    def stations(self):
+        return self.__stations
     def on_tick(self):
         # This is our main function. Should be called from some sort of loop
         # 1. We build now (year,month,day,day_of_week,hour,minute,second,seconds_from_midnight)
@@ -69,7 +74,7 @@ class Controller(object):
                         bit = 0
                     if station.changed:
                         station.changed = False
-                        changed_stations[station.station_id] = bit
+                        changed_stations[station.station_id] = station.bit
                 if len(changed_stations) > 0:
                     for station_id, state in changed_stations.items():
                         self.state[station_id - 1] = state
