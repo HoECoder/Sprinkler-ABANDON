@@ -112,21 +112,25 @@ class StationBlock(object):
         if self.__in_station != value:
             self.__in_station = value
             self.__changed = True
-            if self.__in_station:
+            if self.__in_station and self.wired:
                 sqlite_program_log.log_station_start(self.parent, self.station_id)
-            else:
+            elif (not self.__in_station) and self.wired:
                 sqlite_program_log.log_station_stop(self.parent, self.station_id)
     @property
     def bit(self):
         in_station = self.__in_station
-        bound_station_wired = False
-        # We have to respect if the station is wired up or not
-        if not self.bound_station is None:
-            bound_station = self.bound_station.wired
-        if in_station and bound_station_wired:
+        if in_station and self.wired:
             return 1
         else:
             return 0
+    @property
+    def wired(self):
+        bound_station_wired = False
+        # We have to respect if the station is wired up or not
+        if not self.bound_station is None:
+            bound_station_wired = self.bound_station.wired
+        #print self.station_id, bound_station_wired
+        return bound_station_wired
     @property
     def changed(self):
         return self.__changed

@@ -33,6 +33,7 @@ if __name__ == "__main__":
         settings.load()
         program_manager.load_programs()
         controller = Controller()
+        # print controller.stations
         program_manager.bind_stations(controller.stations)
         sqlite_program_log.load(r"D:\controller\t.db3")
         sqlite_program_log.register_stations(settings.stations.values())
@@ -40,7 +41,7 @@ if __name__ == "__main__":
         changes = sqlite_program_log.conn.total_changes
         i = 0
         day = 24*3600
-        run_time = day * 365 * 4
+        run_time = day * 30
         while i < run_time:
             if i % day == 0:
                 print "Day %d" % ((i/day) + 1)
