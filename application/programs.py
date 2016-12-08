@@ -85,6 +85,7 @@ class StationBlock(object):
         self.__dirty = False
         self.__changed = False
         self.parent = parent
+        self.bound_station = None
     @property
     def dirty(self):
         return self.__dirty
@@ -111,10 +112,25 @@ class StationBlock(object):
         if self.__in_station != value:
             self.__in_station = value
             self.__changed = True
-            if self.__in_station:
+            if self.__in_station and self.wired:
                 sqlite_program_log.log_station_start(self.parent, self.station_id)
-            else:
+            elif (not self.__in_station) and self.wired:
                 sqlite_program_log.log_station_stop(self.parent, self.station_id)
+    @property
+    def bit(self):
+        in_station = self.__in_station
+        if in_station and self.wired:
+            return 1
+        else:
+            return 0
+    @property
+    def wired(self):
+        bound_station_wired = False
+        # We have to respect if the station is wired up or not
+        if not self.bound_station is None:
+            bound_station_wired = self.bound_station.wired
+        #print self.station_id, bound_station_wired
+        return bound_station_wired
     @property
     def changed(self):
         return self.__changed
@@ -152,12 +168,28 @@ class Program(object):
         self.dow = dow
         self.is_one_shot = is_one_shot
         self.station_blocks = station_blocks
+        self.__sb_dict = OrderedDict()
         if not(self.station_blocks is None):
             for sb in self.station_blocks:
                 sb.parent = self
+                self.__sb_dict[sb.station_id] = sb
         self.__dirty = False
         if not(self.station_blocks is None) and len(self.station_blocks) > 0:
             self.fix_start_end()
+    def __getitem__(self, key):
+        return self.__sb_dict[key]
+    def has_key(self, key):
+        return self.__sb_dict.has_key(key)
+    def get(self, key, default = None):
+        return self.__sb_dict.get(key, default)
+    def keys(self):
+        return self.__sb_dict.keys()
+    def values(self):
+        return self.__sb_dict.values()
+    def items(self):
+        return self.__sb_dict.items()
+    def __len__(self):
+        return len(self.__sb_dict)
     @property
     def program_stations(self):
         stids = set()

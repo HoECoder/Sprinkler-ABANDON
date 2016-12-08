@@ -111,6 +111,14 @@ class ProgramManager(object):
             return loaded
         else:
             return loaded
+    # Here we bind the controller's stations to the StationBlocks in the programs
+    def bind_stations(self, controller_stations):
+        for program in self.__programs.values():
+            for station in controller_stations.values():
+                sb = program.get(station.station_id, None)
+                if not sb is None:
+                    sb.bound_station = station
+                
     def running_programs(self):
         return set(self.__running_programs)
         #return filter(lambda prog: prog.running, self.__programs.values())
