@@ -6,6 +6,7 @@ import time
 from program_manager import program_manager
 from settings import settings
 from program_log import sqlite_program_log
+import argparse
 
 if os.name == "nt":
     log_filename = "D:\\toys\\controller\\controller.log"
@@ -21,9 +22,77 @@ program_handler = logging.handlers.RotatingFileHandler(program_log,
 program_handler.setFormatter(fmt)
 logging.getLogger('Program').addHandler(program_handler)
 
+def get_default_sqlite_file_name():
+    t = time.localtime()
+    s = r"D:\controller\t_%04d%02d%02d_%02d%02d%02d.db3" % (t.tm_year,
+                                                            t.tm_mon,
+                                                            t.tm_mday,
+                                                            t.tm_hour,
+                                                            t.tm_min,
+                                                            t.tm_sec)
+    return s
+
+fmt_1 = "%x"
+fmt_2 = "%Y-%m-%d"
+fmt_3 = "%Y/%m/%d"
+fmt_4 = "%y-%m-%d"
+fmt_5 = "%y/%m/%d"
+fmts = [fmt_1, 
+        fmt_2, 
+        fmt_3, 
+        fmt_4, 
+        fmt_5]
+def parse_a_time(str):
+    i = 0
+    l = len(fmts)
+    t = None
+    while i < l:
+        try:
+            fmt = fmts[i]
+            t = time.strptime(str, fmt)
+            i = l
+        except ValueError:
+            i += 1
+    return t
+    
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Test a controller in a tight time-loop')
+    parser.add_argument("-s", 
+                        "--set_date",
+                        metavar = "StartDate",
+                        type = parse_a_time,
+                        default = None,
+                        help = "Change the start of the sim-clock, defaults to today")
+    parser.add_argument("-f", 
+                        "--file",
+                        metavar = "SQLiteFile",
+                        default = get_default_sqlite_file_name(),
+                        help = "Test database for logging")
+    parser.add_argument("-d", 
+                        "--days",
+                        metavar = "Days",
+                        help = "Number of days to simulate; default is 30",
+                        default = 30,
+                        type=int)
+    parser.add_argument("-m", 
+                        "--months",
+                        metavar = "Months",
+                        help = "Number of months (30 d) to simulate",
+                        default = 0,
+                        type=int)
+    parser.add_argument("-y", 
+                        "--years",
+                        metavar = "Years",
+                        help = "Number of years (365 d) to simulate",
+                        default = 0,
+                        type=int)
+    args = parser.parse_args()
+    print args
     s = sim_clock
-    s.reset_to_today()
+    if args.set_date is None:
+        s.reset_to_today()
+    else:
+        s.set_arbitrary_time(args.set_date)
     total_start = time.time()
     d2d_start = 0
     d2d_end = 0
@@ -35,13 +104,13 @@ if __name__ == "__main__":
         controller = Controller()
         # print controller.stations
         program_manager.bind_stations(controller.stations)
-        sqlite_program_log.load(r"D:\controller\t.db3")
+        sqlite_program_log.load(args.file)
         sqlite_program_log.register_stations(settings.stations.values())
         sqlite_program_log.register_programs(program_manager.values())
         changes = sqlite_program_log.conn.total_changes
         i = 0
         day = 24*3600
-        run_time = day * 30
+        run_time = day * (args.days + 30 * args.months + 365 * args.years)
         while i < run_time:
             if i % day == 0:
                 print "Day %d" % ((i/day) + 1)

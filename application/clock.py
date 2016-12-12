@@ -15,14 +15,16 @@ class SimulationClock(object):
         self.ticker += self.tick_unit
     def time(self):
         return self.ticker
+    def set_arbitrary_time(self, time_tuple):
+        t = time.mktime(time_tuple)
+        self.ticker = t
     def reset_to_today(self):
         t = time.localtime()
         t = [x for x in t]
         t[3] = 0
         t[4] = 0
         t[5] = 0
-        t = time.mktime(t)
-        self.ticker = t
+        self.set_arbitrary_time(t)
 
 def __build_make_now(timef=time.time):
     
