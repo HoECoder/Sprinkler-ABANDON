@@ -41,6 +41,7 @@ class Controller(object):
         programs_that_should_run = program_manager.programs_that_should_run(now)
         
         # 3. Loop over these running programs
+        changed_stations = dict()
         for program in program_manager.running_programs():
             value = program.evaluate(now)
             # 3.a. Stop expired programs
@@ -53,10 +54,10 @@ class Controller(object):
                 for station in stations:
                     state[station - 1] = 0
                 if state != self.state:
-                    sel.state = state
+                    self.state = state
                 self.dispatcher.write_pattern_to_register(self.state)
             else: # 3.b We are in a running program (or a program that needs to run)
-                changed_stations = dict()
+                
                 # Loop through the stations and look for stations that fall within our times
                 for station in program.station_blocks:
                     if program.enabled: # Only check on enabled programs
@@ -75,10 +76,10 @@ class Controller(object):
                     if station.changed:
                         station.changed = False
                         changed_stations[station.station_id] = station.bit
-                if len(changed_stations) > 0:
-                    for station_id, state in changed_stations.items():
-                        self.state[station_id - 1] = state
-                    self.dispatcher.write_pattern_to_register(self.state)
+        if len(changed_stations) > 0:
+            for station_id, state in changed_stations.items():
+                self.state[station_id - 1] = state
+            self.dispatcher.write_pattern_to_register(self.state)
         
         #sqlite_program_log.persist()
                 
