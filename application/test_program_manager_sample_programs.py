@@ -84,3 +84,4 @@ simple_program_2 = """{
     "name": "Program 2"
 }"""
 
+simple_programs = [simple_program_1, simple_program_2]

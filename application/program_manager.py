@@ -54,8 +54,9 @@ class ProgramManager(object):
         
         if path != self.programs_path:
             self.programs_path = path
-            if not os.path.exists(self.programs_path)
-                os.makedirs(self._programs_path)
+            if not os.path.exists(self.programs_path):
+                os.makedirs(self.programs_path)
+            self.program_glob = os.path.join(self.programs_path, program_name_glob)
     
     @property
     def dirty(self):
