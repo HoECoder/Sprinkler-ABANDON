@@ -43,15 +43,27 @@ class TestDictionaryInterface(unittest.TestCase):
         self.assertTrue(program_manager.has_key(2))
     
     def test_has_no_key(self):
-        self.assertFalse(program_manager.has_key(3))
+        key = len(simple_programs) + 1
+        self.assertFalse(program_manager.has_key(key))
         
     def test_keys(self):
         keys = program_manager.keys()
         self.assertEquals(len(simple_programs),
                           len(keys),
                           "Not enough keys back")
-        x = [x+1 for x in xrange(len(simple_programs))]
+        x = [x + 1 for x in xrange(len(simple_programs))]
         self.assertSequenceEqual(x, keys, "Incorrect key ids")
         
+class TestDirtyBit(unittest.TestCase):
+    pass
+
+def load_tests(loader, tests, pattern):
     
-dictionary_suite = unittest.TestLoader().loadTestsFromTestCase(TestDictionaryInterface)
+    dict_suite = unittest.TestSuite()
+    dict_suite.addTest(TestDictionaryInterface('test_len'))
+    dict_suite.addTest(TestDictionaryInterface('test_items'))
+    dict_suite.addTest(TestDictionaryInterface('test_has_key'))
+    dict_suite.addTest(TestDictionaryInterface('test_has_no_key'))
+    dict_suite.addTest(TestDictionaryInterface('test_keys'))
+    
+    return unittest.TestSuite([dict_suite])
