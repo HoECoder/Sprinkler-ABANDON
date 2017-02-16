@@ -110,7 +110,7 @@ class TestDirtyBit(unittest.TestCase):
             program.dirty = True
             for sb in program.values():
                 self.assertFalse(sb.dirty,
-                                 "Station Block Should Not Be Dirty: %d" % sb.station_id)
+                                 "Station Block Should Not Be Dirty: %d, %d" % (sb.station_id, program.program_id))
             self.assertTrue(program.dirty,
                             "Program Dirty Bit Not Set:  %d" % program.program_id)
             self.assertTrue(program_manager.dirty,
@@ -118,11 +118,38 @@ class TestDirtyBit(unittest.TestCase):
             program.dirty = False
             for sb in program.values():
                 self.assertFalse(sb.dirty,
-                                 "Station Block Should Not Be Dirty: %d" % sb.station_id)
+                                 "Station Block Should Not Be Dirty: %d, %d" % (sb.station_id, program.program_id))
             self.assertFalse(program.dirty,
-                            "Program Dirty Bit Not Set:  %d" % program.program_id)
+                            "Program Dirty Bit Not UnSet:  %d" % program.program_id)
             self.assertFalse(program_manager.dirty,
-                            "ProgramManager Dirty Bit Not Set")
+                            "ProgramManager Dirty Bit Not UnSet")
+    def test_program_disabled_dirty(self):
+        for program in program_manager.values():
+            program.enabled = False
+            for sb in program.values():
+                self.assertFalse(sb.dirty,
+                                 "Station Block Should Not Be Dirty: %d, %d" % (sb.station_id, program.program_id))
+            self.assertTrue(program.dirty,
+                            "Program Disabled, Dirty Bit Not Set:  %d" % program.program_id)
+            self.assertTrue(program_manager.dirty,
+                            "ProgramManager Dirty Bit Not Set. Program is Dirty: %d" % program.program_id)
+            program.enabled = True
+            for sb in program.values():
+                self.assertFalse(sb.dirty,
+                                 "Station Block Should Not Be Dirty: %d, %d" % (sb.station_id, program.program_id))
+            self.assertTrue(program.dirty,
+                            "Program Enabled, Dirty Bit Not Set:  %d" % program.program_id)
+            self.assertTrue(program_manager.dirty,
+                            "ProgramManager Dirty Bit Not Set. Program is Dirty: %d" % program.program_id)
+            program.dirty = False
+            for sb in program.values():
+                self.assertFalse(sb.dirty,
+                                 "Station Block Should Not Be Dirty: %d, %d" % (sb.station_id, program.program_id))
+            self.assertFalse(program.dirty,
+                            "Program Enabled, Dirty Bit Not UnSet:  %d" % program.program_id)
+            self.assertFalse(program_manager.dirty,
+                            "ProgramManager Dirty Bit Not UnSet. Program is Not Dirty: %d" % program.program_id)
+
 
 def load_tests(loader, tests, pattern):
     
@@ -136,5 +163,6 @@ def load_tests(loader, tests, pattern):
     dict_suite.addTest(TestProgramManagerDictionaryInterface('test_raise_key_error'))
     dict_suite.addTest(TestDirtyBit('test_station_block_dirty'))
     dict_suite.addTest(TestDirtyBit('test_program_dirty'))
+    dict_suite.addTest(TestDirtyBit('test_program_disabled_dirty'))
     
     return unittest.TestSuite([dict_suite])
