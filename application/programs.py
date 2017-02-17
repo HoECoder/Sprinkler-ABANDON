@@ -210,6 +210,7 @@ class Program(object):
         if not(isinstance(value, int) or isinstance(value, float)):
             raise TypeError(value)
         if self.__time_of_day != value:
+            self.dirty = True
             self.__time_of_day = value
             self.fix_start_end()
     @property
