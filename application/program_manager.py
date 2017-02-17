@@ -73,8 +73,7 @@ class ProgramManager(object):
     def delete_program(self, program_id):
         program = self.__programs.pop(program_id, None)
         program.dirty = False
-        file_part = program_name_template % program.program_id
-        full_path = os.path.join(program_logs_path, file_part)
+        full_path = os.path.join(self.programs_path, program_name_template % program.program_id)
         os.remove(full_path)
         program.program_id = 0
         return program
