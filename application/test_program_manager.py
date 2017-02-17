@@ -6,12 +6,17 @@ import os.path
 import json
 import pprint
 import time
-import hashlib
+import hashlib # fast check of contents
+import glob
+
+HASH_CLASS = hashlib.sha256
 
 #Sprinkler imports
 from test_program_manager_sample_programs import *
 from core_config import program_name_glob, program_name_template
-from program_manager import program_manager
+from program_manager import program_manager, Program
+from clock import clock_parse
+import settings_keys
 
 new_path = r"D:\controller\config\test_programs"
 
@@ -22,6 +27,7 @@ def make_program_full_path(pid):
 
 def masterSetup():
     program_manager.change_program_path(new_path)
+    masterTearDown()
     i = 0
     while i < len(simple_programs):
         program_path = make_program_full_path(i + 1)
@@ -36,18 +42,41 @@ def masterSetup():
     program_manager.load_programs()
     
 def masterTearDown():
-    i = 0
-    while i < len(simple_programs):
-        program_path = make_program_full_path(i + 1)
+    prog_glob = program_manager.program_glob
+    program_paths = glob.glob(prog_glob)
+    for program_path in program_paths:
         if os.path.exists(program_path):
             os.remove(program_path)
-        i += 1
 
-def setUpModule():
+def hash_file(path_name):
+    h = HASH_CLASS()
+    f = open(path_name)
+    for line in f:
+        h.update(line)
+    f.close()
+    return h.hexdigest()
+    
+def gather_stats():
+    stats = list()
+    path_names = list()
+    digests = list()
+    i = 0
+    while i < len(simple_programs):
+        path_name = make_program_full_path(i + 1)
+        path_names.append(path_name)
+        stat = os.stat(path_name)
+        stats.append(stat)
+        digest = hash_file(path_name)
+        digests.append(digest)
+        i += 1
+    return stats, path_names, digests
+            
+def setUpModule(): # unittest setup
     masterSetup()
     
-def tearDownModule():
+def tearDownModule(): # unittest teardown
     masterTearDown()
+    pass
         
 class TestProgramManagerDictionaryInterface(unittest.TestCase):
 
@@ -172,36 +201,14 @@ class TestDirtyBit(unittest.TestCase):
 
 class TestProgramManagerWrites(unittest.TestCase):
     def setUp(self):
-        pre_stats, path_names, digests = self.gather_stats()
+        pre_stats, path_names, digests = gather_stats()
         self.pre_stats = pre_stats
         self.path_names = path_names
         self.pre_digests = digests
         #time.sleep(0.125)
     
-    def gather_stats(self):
-        stats = list()
-        path_names = list()
-        digests = list()
-        i = 0
-        while i < len(simple_programs):
-            path_name = make_program_full_path(i + 1)
-            path_names.append(path_name)
-            stat = os.stat(path_name)
-            stats.append(stat)
-            digest = self.hash_file(path_name)
-            digests.append(digest)
-            i += 1
-        return stats, path_names, digests
-    def hash_file(self, path_name):
-        h = hashlib.sha256()
-        f = open(path_name)
-        for line in f:
-            h.update(line)
-        f.close()
-        return h.hexdigest()
-        
     def __check_same_size_same_content(self):
-        post_stats, path_names, digests = self.gather_stats()
+        post_stats, path_names, digests = gather_stats()
         stats = zip(self.pre_stats, post_stats, self.path_names, self.pre_digests, digests)
         for pre_stat, post_stat, path_name, pre_digest, digest in stats:
             self.assertEqual(pre_stat.st_size,
@@ -212,7 +219,7 @@ class TestProgramManagerWrites(unittest.TestCase):
                              "Unequal Hash Digests %s" % path_name)
                              
     def __check_same_size_different_content(self):
-        post_stats, path_names, digests = self.gather_stats()
+        post_stats, path_names, digests = gather_stats()
         stats = zip(self.pre_stats, post_stats, self.path_names, self.pre_digests, digests)
         for pre_stat, post_stat, path_name, pre_digest, digest in stats:
             self.assertEqual(pre_stat.st_size,
@@ -222,7 +229,7 @@ class TestProgramManagerWrites(unittest.TestCase):
                                 digest,
                                 "Equal Hash Digests %s" % path_name)
     def __check_different_size_different_content(self):
-        post_stats, path_names, digests = self.gather_stats()
+        post_stats, path_names, digests = gather_stats()
         stats = zip(self.pre_stats, post_stats, self.path_names, self.pre_digests, digests)
         for pre_stat, post_stat, path_name, pre_digest, digest in stats:
             self.assertNotEqual(pre_stat.st_size,
@@ -233,7 +240,7 @@ class TestProgramManagerWrites(unittest.TestCase):
                                 "Equal Hash Digests %s" % path_name)
     
     def __check_only_different_content(self):
-        post_stats, path_names, digests = self.gather_stats()
+        post_stats, path_names, digests = gather_stats()
         stats = zip(self.pre_stats, post_stats, self.path_names, self.pre_digests, digests)
         for pre_stat, post_stat, path_name, pre_digest, digest in stats:
             self.assertNotEqual(pre_digest, 
@@ -279,6 +286,51 @@ class TestProgramManagerWrites(unittest.TestCase):
                             "Program Should Be Dirty: %d" % program.program_id)
         program_manager.write_programs()
         self.__check_only_different_content()
+        
+class TestProgramManagerProgramMgmt(unittest.TestCase):
+    
+    def __make_new_program(self, name):
+        new_program = Program(program_manager,
+                              -1,
+                              name,
+                              clock_parse("15:33:00"),
+                              settings_keys.EVEN_INTERVAL_TYPE,
+                              True,
+                              None,
+                              None)
+        return new_program
+    
+    def test_add_program(self):
+        new_program = self.__make_new_program("Garbage")
+        program_manager.add_program(new_program)
+        self.assertTrue(new_program.dirty, "New Program Should Be Dirty")
+        program_manager.write_programs()
+        self.assertFalse(new_program.dirty, "New Program Should Not Be Dirty")
+        od = new_program.serialize()
+        serialized_program = json.dumps(od , indent = 4)
+        file_name = os.path.join(program_manager.programs_path, program_name_template % new_program.program_id)
+        h1 = hash_file(file_name)
+        h2 = HASH_CLASS(serialized_program).hexdigest()
+        self.assertEqual(h1, h2, "New Program Failed to Round Trip")
+        
+    def test_add_delete_program(self):
+        new_program = self.__make_new_program("Garbage")
+        program_manager.add_program(new_program)
+        self.assertTrue(new_program.dirty, "New Program Should Be Dirty")
+        program_manager.write_programs()
+        self.assertFalse(new_program.dirty, "New Program Should Not Be Dirty")
+        od = new_program.serialize()
+        serialized_program = json.dumps(od , indent = 4)
+        file_name = os.path.join(program_manager.programs_path, program_name_template % new_program.program_id)
+        h1 = hash_file(file_name)
+        h2 = HASH_CLASS(serialized_program).hexdigest()
+        self.assertEqual(h1, h2, "New Program Failed to Round Trip")
+        prog_glob = program_manager.program_glob
+        current_paths = glob.glob(prog_glob)
+        program_manager.delete_program(new_program.program_id)
+        new_paths = glob.glob(prog_glob)
+        self.assertNotIn(file_name, new_paths)
+        self.assertNotEqual(current_paths, new_paths)
 
 def load_tests(loader, tests, pattern):
     
@@ -298,5 +350,7 @@ def load_tests(loader, tests, pattern):
     dict_suite.addTest(TestProgramManagerWrites('test_write_with_enable_change'))
     dict_suite.addTest(TestProgramManagerWrites('test_with_time_of_day_change'))
     dict_suite.addTest(TestProgramManagerWrites('test_duration_changes'))
+    dict_suite.addTest(TestProgramManagerProgramMgmt('test_add_program'))
+    dict_suite.addTest(TestProgramManagerProgramMgmt('test_add_delete_program'))
     
     return unittest.TestSuite([dict_suite])
