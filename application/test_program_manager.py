@@ -5,6 +5,7 @@ import os
 import os.path
 import json
 import pprint
+import time
 
 #Sprinkler imports
 from test_program_manager_sample_programs import *
@@ -173,6 +174,7 @@ class TestProgramManagerWrites(unittest.TestCase):
         pre_stats, path_names = self.gather_stats()
         self.pre_stats = pre_stats
         self.path_names = path_names
+        #time.sleep(0.125)
     
     def gather_stats(self):
         stats = list()
@@ -197,10 +199,10 @@ class TestProgramManagerWrites(unittest.TestCase):
                              post_stat.st_mtime,
                              "File Time Changed on Program: %s" % path_name)
     def test_write_with_simple_dirty(self):
+        self.setUp()
         for program in program_manager.values():
             program.dirty = True
         self.__stat_size_equal_checking()
-        self.setUp() # Reset
     
     def __stat_size_equal_checking(self):
         self.assertTrue(program_manager.dirty,
@@ -236,32 +238,36 @@ class TestProgramManagerWrites(unittest.TestCase):
                                 "File size should change! %s" % path_name)
             self.assertNotEqual(pre_stat.st_mtime,
                                 post_stat.st_mtime,
-                                "File modification times did not change! %s" % path_name)
+                                "File modification times did not change! %s %f %f" % (path_name,
+                                                                                      pre_stat.st_mtime,
+                                                                                      post_stat.st_mtime,))
         
     def test_write_with_enable_change(self):
+        self.setUp()
         for program in program_manager.values():
             program.enabled = False
         self.__stat_size_unequal_checking()
-        self.setUp() # Reset
-        for program in program_manager.values():
-            program.enabled = True
-        self.__stat_size_unequal_checking()
-        self.setUp() # Reset
         
     def test_with_time_of_day_change(self):
+        self.setUp()
         for program in program_manager.values():
             program.time_of_day = 500
         self.__stat_size_equal_checking() # Time should always be formatted the same length
-        self.setUp() # Reset
-        for program in program_manager.values():
-            program.time_of_day = (24*3600)
-        self.__stat_size_equal_checking() # Time should always be formatted the same length
-        self.setUp() # Reset
         
     def test_duration_changes(self):
+        self.setUp()
         for program in program_manager.values():
             for sb in program.values():
                 sb.duration = 10
+                self.assertTrue(sb.dirty,
+                                "Station Block Should Be Dirty: %d, %d" % (sb.station_id, program.program_id))
+                self.assertTrue(program.dirty,
+                                "Program Should Be Dirty: %d, %d" % (sb.station_id, program.program_id))
+            self.assertTrue(program.dirty,
+                            "Program Should Be Dirty: %d" % program.program_id)
+        self.__stat_size_unequal_checking()
+
+        
                             
 def load_tests(loader, tests, pattern):
     
@@ -280,5 +286,6 @@ def load_tests(loader, tests, pattern):
     dict_suite.addTest(TestProgramManagerWrites('test_write_with_simple_dirty'))
     dict_suite.addTest(TestProgramManagerWrites('test_write_with_enable_change'))
     dict_suite.addTest(TestProgramManagerWrites('test_with_time_of_day_change'))
+    dict_suite.addTest(TestProgramManagerWrites('test_duration_changes'))
     
     return unittest.TestSuite([dict_suite])

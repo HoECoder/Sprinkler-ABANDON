@@ -202,6 +202,9 @@ class Program(object):
     @dirty.setter
     def dirty(self, value):
         self.__dirty = value
+        if not value:
+            for sb in self.station_blocks:
+                sb.dirty = False
     @property
     def time_of_day(self):
         return self.__time_of_day
