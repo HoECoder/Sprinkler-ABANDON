@@ -49,6 +49,6 @@ Function Pause ($Message = "Press any key to continue . . . ") {
 D:
 cd D:\src\Sprinkler\application
 
-python -m unittest -v test_program_manager test_clock
+python -m unittest -v test_clock test_program_manager
 
 Pause
