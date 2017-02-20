@@ -38,6 +38,35 @@ class TestFormatToD(unittest.TestCase):
         for inv in invalid_time_f:
             r = clock_parse(format_time_of_day(inv))
             self.assertEqual(-1, r)
+            
+class TestSimulationClock(unittest.TestCase):
+    def test_monotonicity(self):
+        start = sim_clock.time()
+        for x in xrange(END_OF_DAY):
+            pre_check = sim_clock.time()
+            sim_clock.tick()
+            post_check = sim_clock.time()
+            self.assertTrue(post_check > pre_check)
+        end = sim_clock.time()
+        self.assertTrue(end > start)
+    def test_small_ticks(self):
+        sim_clock.reset_to_today()
+        sim_clock.tick_unit = 0.1
+        start = sim_clock.time()
+        for x in xrange(10):
+            pre_check = sim_clock.time()
+            sim_clock.tick()
+            post_check = sim_clock.time()
+            self.assertTrue(post_check > pre_check)
+            self.assertTrue(post_check - pre_check < 1)
+        end = sim_clock.time()
+        self.assertTrue(end > start)
+        self.assertAlmostEqual(end - start , 1, places = 5) # This is a fiddly pain
+        sim_clock.tick_unit = 1
+    def tearDown(self):
+        sim_clock.tick_unit = 1
+        sim_clock.reset_to_today()
+            
 
 def load_tests(loader, tests, pattern):
     
@@ -46,5 +75,7 @@ def load_tests(loader, tests, pattern):
     dict_suite.addTest(TestClockParse('test_invalid_times'))
     dict_suite.addTest(TestFormatToD('test_valid_times'))
     dict_suite.addTest(TestFormatToD('test_invalid_times'))
+    dict_suite.addTest(TestSimulationClock('test_monotonicity'))
+    dict_suite.addTest(TestSimulationClock('test_small_ticks'))
 
     return unittest.TestSuite([dict_suite])
