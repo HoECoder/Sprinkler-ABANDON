@@ -28,6 +28,8 @@ class ProgramManager(object):
                                  ODD_INTERVAL_TYPE : self.__odd_keys ,
                                  DOW_INTERVAL_TYPE : self.__dow_keys}
         self.program_glob = os.path.join(self.programs_path, program_name_glob)
+    
+    # Dictionary interface
     def __getitem__(self, key):
         return self.__programs[key]
     def __setitem__(self, program_id, new_program):
@@ -47,6 +49,15 @@ class ProgramManager(object):
         return self.__programs.items()
     def __len__(self):
         return len(self.__programs)
+    
+    def change_program_path(self, path):
+        
+        if path != self.programs_path:
+            self.programs_path = path
+            if not os.path.exists(self.programs_path):
+                os.makedirs(self.programs_path)
+            self.program_glob = os.path.join(self.programs_path, program_name_glob)
+    
     @property
     def dirty(self):
         return reduce(lambda a, b: a or b.dirty, self.__programs.values(), False)
@@ -62,8 +73,7 @@ class ProgramManager(object):
     def delete_program(self, program_id):
         program = self.__programs.pop(program_id, None)
         program.dirty = False
-        file_part = program_name_template % program.program_id
-        full_path = os.path.join(program_logs_path, file_part)
+        full_path = os.path.join(self.programs_path, program_name_template % program.program_id)
         os.remove(full_path)
         program.program_id = 0
         return program
