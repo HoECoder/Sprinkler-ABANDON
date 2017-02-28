@@ -18,6 +18,8 @@ class SimulationClock(object):
     def set_arbitrary_time(self, time_tuple):
         t = time.mktime(time_tuple)
         self.ticker = t
+    def set_arbitrary_time_float(self, t):
+        self.ticker = t
     def reset_to_today(self):
         t = time.localtime()
         t = [x for x in t]
