@@ -53,14 +53,11 @@ def __build_make_now(timef=time.time):
     return make_now
 
 def pretty_now(now):
-    s = "%d/%d/%d %02d:%02d:%02d %d"
-    r = s %(now['year'],
-                now['month'],
-                now['day'],
-                now['hour'],
-                now['minute'],
-                now['second'],
-                now['seconds_from_midnight'])
+    s = "Epoch: %0.1f, D: %d, DOW: %d, Sec: %d"
+    r = s %(now['epoch'],
+            now['day'],
+            now['day_of_week'],
+            now['seconds_from_midnight'])
     return r
 
 def clock_parse(s):

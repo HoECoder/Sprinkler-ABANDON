@@ -67,6 +67,11 @@ class TestSimulationClock(unittest.TestCase):
         sim_clock.tick_unit = 1
         sim_clock.reset_to_today()
             
+class TestPrettyNow(unittest.TestCase):
+    def test_pretty_now(self):
+        now = make_now()
+        s = pretty_now(now)
+        self.assertIsNotNone(s)
 
 def load_tests(loader, tests, pattern):
     
@@ -77,5 +82,6 @@ def load_tests(loader, tests, pattern):
     dict_suite.addTest(TestFormatToD('test_invalid_times'))
     dict_suite.addTest(TestSimulationClock('test_monotonicity'))
     dict_suite.addTest(TestSimulationClock('test_small_ticks'))
+    dict_suite.addTest(TestPrettyNow('test_pretty_now'))
 
     return unittest.TestSuite([dict_suite])
