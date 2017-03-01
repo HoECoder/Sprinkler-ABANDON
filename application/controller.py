@@ -10,11 +10,12 @@ from programs import *
 from program_log import sqlite_program_log
 
 class Controller(object):
-    def __init__(self, dispatch_class = DefaultDispatcher):
+    def __init__(self, dispatch_class = DefaultDispatcher, logger = sqlite_program_log):
         # self.program_manager = ProgramManager()
         # self.settings = Settings()
         # self.settings.load()
         # self.program_manager.load_programs()
+        self.logger = logger
         self.__stations = None
         self.dispatcher = DefaultDispatcher()
         self.__prepare_state()

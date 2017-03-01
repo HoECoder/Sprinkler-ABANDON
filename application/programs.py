@@ -43,17 +43,17 @@ program_schema = {PROGRAM_ID_KEY : {"type" : "integer",
 
 program_validator = cerberus.Validator(program_schema,allow_unknown = True)
 
-def unpack_station_block(d):
-    s = StationBlock(d[STATION_ID_KEY],d[DURATION_KEY])
+def unpack_station_block(d, logger = sqlite_program_log):
+    s = StationBlock(d[STATION_ID_KEY], d[DURATION_KEY], logger = logger)
     return s
 
-def unpack_program(d, manager):
+def unpack_program(d, manager, logger = sqlite_program_log):
     if not program_validator.validate(d):
         return None #TODO : raise an error
     program_id = d[PROGRAM_ID_KEY]
     time_of_day = clock_parse(d[TIME_OF_DAY_KEY])
     int_d = d[INTERVAL_KEY]
-    stations = [unpack_station_block(s) for s in d[STATION_DURATION_KEY]]
+    stations = [unpack_station_block(s, logger) for s in d[STATION_DURATION_KEY]]
     interval = int_d["type"]
     enabled = d.get(ENABLED_DISABLED_KEY, True)
     program_name = d.get(PROGRAM_NAME_KEY,"Program %d" % program_id)
@@ -76,7 +76,8 @@ class StationBlock(object):
                  duration,
                  start_time=0,
                  end_time=0,
-                 parent = None):
+                 parent = None,
+                 logger = sqlite_program_log):
         self.station_id = station_id
         self.__duration = duration
         self.start_time = start_time
@@ -86,6 +87,7 @@ class StationBlock(object):
         self.__changed = False
         self.parent = parent
         self.bound_station = None
+        self.logger = logger
     @property
     def dirty(self):
         return self.__dirty
@@ -113,9 +115,9 @@ class StationBlock(object):
             self.__in_station = value
             self.__changed = True
             if self.__in_station and self.wired:
-                sqlite_program_log.log_station_start(self.parent, self.station_id)
+                self.logger.log_station_start(self.parent, self.station_id)
             elif (not self.__in_station) and self.wired:
-                sqlite_program_log.log_station_stop(self.parent, self.station_id)
+                self.logger.log_station_stop(self.parent, self.station_id)
     @property
     def bit(self):
         in_station = self.__in_station
