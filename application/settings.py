@@ -7,8 +7,8 @@ from copy import deepcopy
 from collections import OrderedDict
 from core_config import *
 from settings_keys import *
-from programs import *
-from singleton import *
+#from programs import *
+
 from utility import find_key_gap
 from clock import pretty_now
 
