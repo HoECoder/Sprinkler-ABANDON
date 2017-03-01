@@ -5,6 +5,35 @@ from clock import *
 from settings import *
 from program_log_sql import *
 
+class ConsoleProgramLog(object):
+    def __init__(self):
+        pass
+        
+    def load(self, filename):
+        pass
+
+    def log_program_start(self, program, now=None):
+        pass
+
+    def log_program_stop(self, program, now=None):
+        pass
+
+    def log_station_start(self, program, station_id, now=None):
+        pass
+
+    def log_station_stop(self, program, station_id, now=None):
+        pass
+
+    def persist(self):
+        pass
+
+    def register_programs(self, programs):
+        pass
+
+    def register_stations(self, stations):
+        pass
+
+
 import sqlite3
 class SQLiteProgramLog(object):
     def __init__(self):
