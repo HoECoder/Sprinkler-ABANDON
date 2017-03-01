@@ -13,7 +13,8 @@ from clock import pretty_now
 from program_log import sqlite_program_log
 
 class ProgramManager(object):
-    def __init__(self, programs_path = programs_path):
+    def __init__(self, programs_path = programs_path, logger = sqlite_program_log):
+        self.logger = logger
         self.programs_path = programs_path
         exists = os.path.exists(self.programs_path)
         if not exists:
@@ -106,7 +107,7 @@ class ProgramManager(object):
                 try:
                     program_file = open(pp,"rb")
                     program_d = json.load(program_file)
-                    program = unpack_program(program_d, self)
+                    program = unpack_program(program_d, self, self.logger)
                     programs[program.program_id] = program
                     program_file.close()
                     del program_file
@@ -135,10 +136,10 @@ class ProgramManager(object):
     def move_program(self, program, running):
         if running:
             self.__running_programs.add(program)
-            sqlite_program_log.log_program_start(program)
+            self.logger.log_program_start(program)
         else:
             self.__running_programs.remove(program)
-            sqlite_program_log.log_program_stop(program)
+            self.logger.log_program_stop(program)
     def non_running_programs(self):
         return filter(lambda prog: not prog.running, self.__programs.values())
     def programs_that_should_run(self, now):

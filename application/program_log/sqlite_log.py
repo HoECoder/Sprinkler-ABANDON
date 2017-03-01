@@ -14,8 +14,14 @@ class SQLiteProgramLog(object):
         self.sqlite3_filename = sqlite3_filename
         self.conn = sqlite3.connect(sqlite3_filename)
         self.__prepare_tables()
-    
+    @property
+    def total_changes(self):
+        if self.conn is None:
+            return 0
+        return self.conn.total_changes
     def __prepare_tables(self):
+        if self.conn is None:
+            return
         self.conn.executescript(program_log_sql)
         event_types = list()
         for event, id in sql_event_map.items():
@@ -28,6 +34,8 @@ class SQLiteProgramLog(object):
         self.conn.commit()
         
     def __enter_programs(self, programs):
+        if self.conn is None:
+            return
         programs_inserts = list()
         program_stations_inserts = list()
         for program in programs:
@@ -42,6 +50,8 @@ class SQLiteProgramLog(object):
         self.conn.commit()
         
     def __enter_stations(self, stations):
+        if self.conn is None:
+            return
         inserts = list()
         for station in stations:
             insert = (station.station_id, station.name)
@@ -50,7 +60,8 @@ class SQLiteProgramLog(object):
         self.conn.commit()
         
     def persist(self):
-        self.conn.commit()
+        if not self.conn is None:
+            self.conn.commit()
     
     def register_programs(self, programs):
         self.__enter_programs(programs)
@@ -59,6 +70,8 @@ class SQLiteProgramLog(object):
         self.__enter_stations(stations)
         
     def __log_program_event(self, program, event, now = None):
+        if self.conn is None:
+            return
         if now == None:
             now = make_now()
         event_id = sql_event_map[event]
@@ -72,6 +85,8 @@ class SQLiteProgramLog(object):
         self.__log_program_event(program, sql_event_stop, now)
         
     def __log_station_event(self, program, station_id, event, now = None):
+        if self.conn is None:
+            return
         if now == None:
             now = make_now()
         event_id = sql_event_map[event]

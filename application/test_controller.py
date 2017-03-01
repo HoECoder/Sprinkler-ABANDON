@@ -5,7 +5,7 @@ from clock import sim_clock
 import time
 from program_manager import program_manager
 from settings import settings
-from program_log import sqlite_program_log
+from program_log import sqlite_program_log, console_log
 import argparse
 
 if os.name == "nt":
@@ -57,17 +57,23 @@ def parse_a_time(str):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test a controller in a tight time-loop')
+    log_group = parser.add_mutually_exclusive_group()
     parser.add_argument("-s", 
                         "--set_date",
                         metavar = "StartDate",
                         type = parse_a_time,
                         default = None,
                         help = "Change the start of the sim-clock, defaults to today")
-    parser.add_argument("-f", 
-                        "--file",
-                        metavar = "SQLiteFile",
-                        default = get_default_sqlite_file_name(),
-                        help = "Test database for logging")
+    log_group.add_argument("-f", 
+                           "--file",
+                           metavar = "SQLiteFile",
+                           default = get_default_sqlite_file_name(),
+                           help = "Test database for logging")
+    log_group.add_argument("-c",
+                           "--console",
+                           action='store_true',
+                           default = False,
+                           help = "Log to the console")
     parser.add_argument("-d", 
                         "--days",
                         metavar = "Days",
@@ -99,15 +105,22 @@ if __name__ == "__main__":
     changes = 0
     new_changes = 0
     try:
+        if args.console:
+            program_manager.logger = console_log
+            logger = console_log
+        else:
+            program_manager.logger = sqlite_program_log
+            sqlite_program_log.load(args.file)
+            logger = sqlite_program_log
         settings.load()
         program_manager.load_programs()
         controller = Controller()
         # print controller.stations
         program_manager.bind_stations(controller.stations)
-        sqlite_program_log.load(args.file)
-        sqlite_program_log.register_stations(settings.stations.values())
-        sqlite_program_log.register_programs(program_manager.values())
-        changes = sqlite_program_log.conn.total_changes
+        logger.register_stations(settings.stations.values())
+        logger.register_programs(program_manager.values())
+        
+        changes = logger.total_changes
         i = 0
         day = 24*3600
         run_time = day * (args.days + 30 * args.months + 365 * args.years)
@@ -115,16 +128,17 @@ if __name__ == "__main__":
             if i % day == 0:
                 print "Day %d" % ((i/day) + 1)
             controller.on_tick()
-            new_changes = sqlite_program_log.conn.total_changes
+            
+            new_changes = logger.total_changes
             if new_changes != changes:
                 
                 #print "\t%d new changes" % (new_changes-changes)
                 changes = new_changes
             i += 1
             s.tick()
-        sqlite_program_log.persist()
+        logger.persist()
     except KeyboardInterrupt:
         print "\nCTRL-C caught, Shutdown"
-        sqlite_program_log.persist()
+        logger.persist()
     total_end = time.time()
     print "Run time : %f" % (total_end-total_start)

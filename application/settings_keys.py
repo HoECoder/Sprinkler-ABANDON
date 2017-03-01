@@ -32,3 +32,8 @@ ENABLED_DISABLED_KEY = "enabled"
 EVEN_INTERVAL_TYPE = "even"
 ODD_INTERVAL_TYPE = "odd"
 DOW_INTERVAL_TYPE = "day_of_week"
+
+TIME_DAY_KEY = "day"
+TIME_DOW_KEY = "day_of_week"
+TIME_FROM_MIDNIGHT = "seconds_from_midnight"
+TIME_EPOCH = "epoch"
