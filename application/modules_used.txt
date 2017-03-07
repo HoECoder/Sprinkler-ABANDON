@@ -1,0 +1,15 @@
+This program uses the following modules not included with Python:
+
+Cerberus - Schema Validator 
+Use: Used to make sure various config files match a spec, smooths processing
+URL: http://docs.python-cerberus.org/en/stable/
+ModuleName: cerberus
+
+PyTZ - Time Zone Code
+Use: Used to make sure time zones are working correctly. Mostly in unit-tests,
+as the program clock is run in UTC. However, users entire time in the local 
+time zone relative to midnight. Mostly, want to make sure the short and long 
+days work right. Note: the TZ implementation, at least on Win7, doesn't respect
+historical Std/DST boundary rules.
+URL: http://pytz.sourceforge.net/
+ModuleName: pytz
