@@ -1,14 +1,18 @@
 import unittest
+from copy import deepcopy
 
 import time
 import datetime
 from calendar import timegm
 import pytz
 
+from settings_keys import TIME_DAY_KEY, TIME_DOW_KEY, TIME_FROM_MIDNIGHT, TIME_EPOCH
 from clock import *
 from settings import settings
 from program_manager import program_manager
+from programs import unpack_program
 from controller import Controller
+from program_log import console_log
 from core_config import program_name_glob, program_name_template
 from test_program_manager import new_path, make_program_full_path
 from test_program_manager_sample_programs import *
@@ -34,20 +38,20 @@ long_tick_count = len(long_sample_times)
 fmt = '%Y-%m-%d %H:%M:%S %Z'
 
 def setUpProgramManager():
+    program_manager.logger = console_log
     program_manager.change_program_path(new_path)
-    masterTearDown()
-    i = 0
-    while i < len(dst_programs):
-        program_path = make_program_full_path(i + 1)
-        if os.path.exists(program_path):
-            os.remove(program_path)
-        f = open(program_path, "wb")
-        f.write(dst_programs[i])
-        f.flush()
-        f.close()
-        del f
-        i += 1
-    program_manager.load_programs()
+    
+    even = deepcopy(dst_program)
+    odd = deepcopy(dst_program)
+    even[INTERVAL_KEY][INTERVAL_TYPE_KEY] = EVEN_INTERVAL_TYPE
+    odd[INTERVAL_KEY][INTERVAL_TYPE_KEY] = EVEN_INTERVAL_TYPE
+    even_prog = unpack_program(even, program_manager, program_manager.logger)
+    odd_prog = unpack_program(odd, program_manager, program_manager.logger)
+    
+    program_manager.add_program(even_prog)
+    program_manager.add_program(odd_prog)
+    
+    program_manager.write_programs()
     
 def tearDownProgramManager():
     prog_glob = program_manager.program_glob
@@ -85,9 +89,9 @@ class TestClockShortLongDaySimple(unittest.TestCase):
         for x in xrange(len(check_list)):
             now = make_now()
             if debug_print:
-                s = ("%s, %s" % (time.strftime(fmt,time.localtime(now['epoch'])), pretty_now(now)))
+                s = ("%s, %s" % (time.strftime(fmt,time.localtime(now[TIME_EPOCH])), pretty_now(now)))
                 print s
-            seconds_from_midnight.append(now['seconds_from_midnight'])
+            seconds_from_midnight.append(now[TIME_FROM_MIDNIGHT])
             sim_clock.tick()
         msg = "Bad Transition: %0.1f" % transition
         self.assertEqual(check_list, seconds_from_midnight, msg)
@@ -112,10 +116,25 @@ class TestClockShortLongDaySimple(unittest.TestCase):
 class TestProgramStatesOnTransition(unittest.TestCase):
     def setUp(self):
         settings.load()
+        setUpProgramManager()
         controller = Controller()
         program_manager.bind_stations(controller.stations)
         self.controller = controller
-    def test_single_transition(self, transition, check_list):
+    def __test_single_transition(self, transition, check_list, debug_print = False):
+        sim_clock.set_arbitrary_time_float(transition)
+        if debug_print:
+            print '====='
+        seconds_from_midnight = list()
+        for x in xrange(len(check_list)):
+            now = make_now()
+            if debug_print:
+                s = ("%s, %s" % (time.strftime(fmt,time.localtime(now[TIME_EPOCH])), pretty_now(now)))
+                print s
+            seconds_from_midnight.append(now[TIME_FROM_MIDNIGHT])
+            controller.on_tick()
+            sim_clock.tick()
+        msg = "Bad Transition: %0.1f" % transition
+    def test_single_transition(self):
         sim_clock.set_arbitrary_time_float(transition)
         #print '====='
         
