@@ -40,11 +40,11 @@ def __build_make_now(timef=time.time):
                                  current_time.tm_sec)
         n = dict()
 
-        n["day"] = current_time.tm_mday
-        n["day_of_week"] = current_time.tm_wday
+        n[TIME_DAY_KEY] = current_time.tm_mday
+        n[TIME_DOW_KEY] = current_time.tm_wday
 
-        n["seconds_from_midnight"] = seconds_from_midnight
-        n["epoch"] = epoch_seconds
+        n[TIME_FROM_MIDNIGHT] = seconds_from_midnight
+        n[TIME_EPOCH] = epoch_seconds
         # n["year"] = current_time.tm_year
         # n["month"] = current_time.tm_mon
         # n["hour"] = current_time.tm_hour
@@ -56,10 +56,10 @@ def __build_make_now(timef=time.time):
 
 def pretty_now(now):
     s = "Epoch: %0.1f, D: %d, DOW: %d, Sec: %d"
-    r = s %(now['epoch'],
-            now['day'],
-            now['day_of_week'],
-            now['seconds_from_midnight'])
+    r = s %(now[TIME_EPOCH],
+            now[TIME_DAY_KEY],
+            now[TIME_DOW_KEY],
+            now[TIME_FROM_MIDNIGHT])
     return r
 
 def clock_parse(s):
