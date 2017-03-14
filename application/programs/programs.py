@@ -20,7 +20,7 @@ def unpack_program(d, manager, logger = sqlite_program_log):
     time_of_day = clock_parse(d[TIME_OF_DAY_KEY])
     int_d = d[INTERVAL_KEY]
     stations = [unpack_station_block(s, logger) for s in d[STATION_DURATION_KEY]]
-    interval = int_d["type"]
+    interval = int_d[INTERVAL_TYPE_KEY]
     enabled = d.get(ENABLED_DISABLED_KEY, True)
     program_name = d.get(PROGRAM_NAME_KEY,"Program %d" % program_id)
     if not interval in even_odd_intervals:
@@ -170,7 +170,7 @@ class Program(object):
          1 - Continue running
          0 - Stop running
         """
-        if now["day"] % 2 == 0:
+        if now[TIME_DAY_KEY] % 2 == 0:
             even_odd = EVEN_INTERVAL_TYPE
         else:
             even_odd = ODD_INTERVAL_TYPE
@@ -178,10 +178,10 @@ class Program(object):
         if self.interval in even_odd_intervals and self.interval == even_odd:
             in_day = True
         elif self.interval == DOW_INTERVAL_TYPE:
-            in_day = now["day"] in self.dow
+            in_day = now[TIME_DAY_KEY] in self.dow
         evaluation = TOO_EARLY
         if in_day:
-            seconds = now["seconds_from_midnight"]
+            seconds = now[TIME_FROM_MIDNIGHT]
             if seconds < self.start_time:
                 evaluation = TOO_EARLY
             elif seconds >= self.end_time:

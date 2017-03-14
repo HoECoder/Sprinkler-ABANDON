@@ -2,6 +2,7 @@
 from singleton import singleton
 from core_config import SIMULATE_TIME, TIME_PARSE_FORMAT, TIME_DUMP_FORMAT
 import time
+from settings_keys import TIME_DAY_KEY, TIME_DOW_KEY, TIME_FROM_MIDNIGHT, TIME_EPOCH
 
 class SimulationClock(object):
     def __init__(self,start_time=None):

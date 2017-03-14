@@ -75,7 +75,7 @@ class SQLiteProgramLog(object):
         if now == None:
             now = make_now()
         event_id = sql_event_map[event]
-        self.conn.execute(program_event_insert, (now['epoch'], program.program_id, event_id))
+        self.conn.execute(program_event_insert, (now[TIME_EPOCH], program.program_id, event_id))
         #self.conn.commit()
         
     def log_program_start(self, program, now = None):
@@ -90,7 +90,7 @@ class SQLiteProgramLog(object):
         if now == None:
             now = make_now()
         event_id = sql_event_map[event]
-        self.conn.execute(station_event_insert, (now['epoch'], station_id, event_id))
+        self.conn.execute(station_event_insert, (now[TIME_EPOCH], station_id, event_id))
         #self.conn.commit()
         
     def log_station_start(self, program, station_id, now = None):
