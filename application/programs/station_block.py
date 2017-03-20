@@ -7,20 +7,31 @@ class StationBlock(object):
     def __init__(self,
                  station_id,
                  duration,
-                 start_time = 0,
-                 end_time = 0,
                  parent = None,
                  logger = sqlite_program_log):
+        
         self.station_id = station_id
         self.__duration = duration
-        self.start_time = start_time
-        self.end_time = end_time
+        self.__start_time = None
+        self.__running_time = -1
         self.__in_station = False
         self.__dirty = False
         self.__changed = False
         self.parent = parent
         self.bound_station = None
         self.logger = logger
+    @property
+    def start_time(self):
+        return self.__start_time
+    @start_time.setter
+    def start_time(self, value):
+        if value > 0 and self.__in_station:
+            self.__start_time = value
+            self.__running_time = value + self.__duration
+        else: 
+            self.__start_time = None
+            self.__running_time = -1
+    
     @property
     def dirty(self):
         return self.__dirty
@@ -78,8 +89,8 @@ class StationBlock(object):
         d[DURATION_KEY] = self.duration
         return d
     def within(self, now):
-        seconds = now[TIME_FROM_MIDNIGHT]
-        return self.start_time <= seconds and seconds < self.end_time
+        seconds = now[TIME_EPOCH]
+        return seconds < = self.__running_time # The wallclock hasn't exceeded our overall runtime.
 
 def unpack_station_block(d, logger = sqlite_program_log):
     s = StationBlock(d[STATION_ID_KEY], d[DURATION_KEY], logger = logger)
