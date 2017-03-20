@@ -90,7 +90,7 @@ class StationBlock(object):
         return d
     def within(self, now):
         seconds = now[TIME_EPOCH]
-        return seconds < = self.__running_time # The wallclock hasn't exceeded our overall runtime.
+        return seconds <= self.__running_time # The wallclock hasn't exceeded our overall runtime.
 
 def unpack_station_block(d, logger = sqlite_program_log):
     s = StationBlock(d[STATION_ID_KEY], d[DURATION_KEY], logger = logger)
