@@ -1,5 +1,5 @@
 import logging
-from clock import clock_parse, pretty_now, make_now, format_time_of_day
+from clock import clock_parse, format_time_of_day
 from collections import OrderedDict
 from core_config import END_OF_DAY, STATION_ON_OFF
 from settings_keys import *
@@ -114,11 +114,6 @@ class Program(object):
         if self.__running != value:
             self.__running = value
             self.manager.move_program(self, value)
-            # self.logger.debug("%s: Program %d %s", 
-                              # pretty_now(make_now()), 
-                              # self.program_id, 
-                              # STATION_ON_OFF[value])
-            #print "Program %s" % (STATION_ON_OFF[value])
             if not self.__running:
                 for sb in self.station_blocks:
                     sb.in_station = False
