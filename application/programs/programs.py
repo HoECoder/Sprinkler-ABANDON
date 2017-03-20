@@ -1,51 +1,17 @@
 import logging
 from clock import clock_parse, pretty_now, make_now, format_time_of_day
 from collections import OrderedDict
-from core_config import interval_types, END_OF_DAY, TIME_DUMP_FORMAT, STATION_ON_OFF
+from core_config import END_OF_DAY, STATION_ON_OFF
 from settings_keys import *
-import cerberus
+
+from validation import program_validator, even_odd_intervals
+from station_block import StationBlock, unpack_station_block
+
 from program_log import sqlite_program_log
 
-even_odd_intervals = [EVEN_INTERVAL_TYPE,
-                      ODD_INTERVAL_TYPE]
-                      
 TOO_EARLY = -1
 STOP = 0
 START = 1
-                                 
-def validate_interval(field, value, error):
-    typ = value[INTERVAL_TYPE_KEY]
-    if typ == DOW_INTERVAL_TYPE:
-        days = value.get(RUN_DAYS_KEY, None)
-        if days is None:
-            error(field, "Day of Week Interval must contain a list of days")
-        ma = max(days)
-        mi = min(days)
-        if mi < 0 or ma > 6:
-            error(field, "Day of Week Interval must have a list of days Sun - Sat")
-    elif not typ in even_odd_intervals:
-        error(field, "Interval type must be 'even','odd','day_of_week'")
-
-
-station_block_schema = {STATION_ID_KEY : {"type" : "integer",
-                                          "min" : 0},
-                        DURATION_KEY : {"type" : "integer",
-                                        "min" : 0}}
-program_schema = {PROGRAM_ID_KEY : {"type" : "integer",
-                                    "min" : 0},
-                  TIME_OF_DAY_KEY : {"type" : "string"},
-                  INTERVAL_KEY : {"type":"dict",
-                                  "validator":validate_interval},
-                  PROGRAM_NAME_KEY: {"type" : "string"},
-                  STATION_DURATION_KEY : {"type" : "list",
-                                          "schema" : {"type" : "dict",
-                                                      "schema" : station_block_schema}}}
-
-program_validator = cerberus.Validator(program_schema,allow_unknown = True)
-
-def unpack_station_block(d, logger = sqlite_program_log):
-    s = StationBlock(d[STATION_ID_KEY], d[DURATION_KEY], logger = logger)
-    return s
 
 def unpack_program(d, manager, logger = sqlite_program_log):
     if not program_validator.validate(d):
@@ -69,84 +35,6 @@ def unpack_program(d, manager, logger = sqlite_program_log):
                    enabled,
                    dow = days,
                    station_blocks = stations)
-
-class StationBlock(object):
-    def __init__(self,
-                 station_id,
-                 duration,
-                 start_time=0,
-                 end_time=0,
-                 parent = None,
-                 logger = sqlite_program_log):
-        self.station_id = station_id
-        self.__duration = duration
-        self.start_time = start_time
-        self.end_time = end_time
-        self.__in_station = False
-        self.__dirty = False
-        self.__changed = False
-        self.parent = parent
-        self.bound_station = None
-        self.logger = logger
-    @property
-    def dirty(self):
-        return self.__dirty
-    @dirty.setter
-    def dirty(self, value):
-        self.__dirty = value
-    @property
-    def duration(self):
-        return self.__duration
-    @duration.setter
-    def duration(self, value):
-        if not(isinstance(value, int) or isinstance(value, float)):
-            raise TypeError(value)
-        if self.__duration != value:
-            self.__duration = value
-            self.__dirty = True
-            if not self.parent is None:
-                self.parent.fix_start_end()
-    @property
-    def in_station(self):
-        return self.__in_station
-    @in_station.setter
-    def in_station(self, value):
-        if self.__in_station != value:
-            self.__in_station = value
-            self.__changed = True
-            if self.__in_station and self.wired:
-                self.logger.log_station_start(self.parent, self.station_id)
-            elif (not self.__in_station) and self.wired:
-                self.logger.log_station_stop(self.parent, self.station_id)
-    @property
-    def bit(self):
-        in_station = self.__in_station
-        if in_station and self.wired:
-            return 1
-        else:
-            return 0
-    @property
-    def wired(self):
-        bound_station_wired = False
-        # We have to respect if the station is wired up or not
-        if not self.bound_station is None:
-            bound_station_wired = self.bound_station.wired
-        #print self.station_id, bound_station_wired
-        return bound_station_wired
-    @property
-    def changed(self):
-        return self.__changed
-    @changed.setter
-    def changed(self, value):
-        self.__changed = value
-    def serialize(self):
-        d = OrderedDict()
-        d[STATION_ID_KEY] = self.station_id
-        d[DURATION_KEY] = self.duration
-        return d
-    def within(self, now):
-        seconds = now["seconds_from_midnight"]
-        return self.start_time <= seconds and seconds < self.end_time
 
 class Program(object):
     def __init__(self,
