@@ -17,8 +17,9 @@ class Controller(object):
         # self.program_manager.load_programs()
         self.logger = logger
         self.__stations = None
-        self.dispatcher = DefaultDispatcher()
+        self.dispatcher = dispatch_class()
         self.__prepare_state()
+        self.__station_queue = None
     def __prepare_state(self):
         station_count = settings[STATIONS_AVAIL_KEY]
         self.state = [0 for x in xrange(station_count)]
@@ -29,54 +30,24 @@ class Controller(object):
         return self.__stations
     def on_tick(self):
         # This is our main function. Should be called from some sort of loop
-        # 1. We build now (year,month,day,day_of_week,hour,minute,second,seconds_from_midnight)
-        # 2. Loop over programs and mark as running those programs that should run
-        # 3. Loop over running programs
-        # 3.a. Stop any expired programs
-        # 3.b. Advance any running program
+        # 1. We build now (year,month,day,day_of_week,hour,minute,second,seconds_from_midnight).
+        # 2. Check if programs should run, add their stations to the queue. Queue is time-ordered.
+        # 3. Service the queue and run list
+        # 3.a. If the station in the run list has expired, prepare a stop, remove it from the run list.
+        # 3.b. If the station in the run list still needs to run, increment its counter.
+        # 3.c. If the run list is empty, pop the next item out of the queue and start it.
+        # 3.d. If we've received a request to stop the currently executing station, prepare a stop, 
+        #      remove it from the run list. Pop the next item out of the queue.
+        # 4. Dispatch IO
         
         # 1. Build now
         now = make_now()
         
-        # 2. Loop over all programs for today and find those that need to start
-        programs_that_should_run = program_manager.programs_that_should_run(now)
+        # 2. Get programs that should run now.
+        running_programs = program_manager.programs_that_should_run(now)
         
-        # 3. Loop over these running programs
-        changed_stations = dict()
-        for program in program_manager.running_programs():
-            value = program.evaluate(now)
-            # 3.a. Stop expired programs
-            if value in [TOO_EARLY, STOP]: # If we are running and we get either, full stop
-                # Stop the program
-                program.running = False
-                # Dispatch a Stop
-                stations = program.program_stations
-                state = list(self.state)
-                for station in stations:
-                    state[station - 1] = 0
-                if state != self.state:
-                    self.state = state
-                self.dispatcher.write_pattern_to_register(self.state)
-            else: # 3.b We are in a running program (or a program that needs to run)
-                
-                # Loop through the stations and look for stations that fall within our times
-                for station in program.station_blocks:
-                    if program.enabled: # Only check on enabled programs
-                        if station.within(now):
-                            #Inside a station, turn it on
-                            bit = 1
-                            station.in_station = True
-                        else:
-                            #Not in a station, turn it off
-                            bit = 0
-                            station.in_station = False
-                    else: 
-                        # Program is disabled, disabling a program sets all stations 
-                        # to in_station = False and changed = True
-                        bit = 0
-                    if station.changed:
-                        station.changed = False
-                        changed_stations[station.station_id] = station.bit
+        
+        # 4. Dispatch IO
         if len(changed_stations) > 0:
             for station_id, state in changed_stations.items():
                 self.state[station_id - 1] = state

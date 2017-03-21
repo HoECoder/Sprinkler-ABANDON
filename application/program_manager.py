@@ -143,11 +143,11 @@ class ProgramManager(object):
     def non_running_programs(self):
         return filter(lambda prog: not prog.running, self.__programs.values())
     def programs_that_should_run(self, now):
-        if now["day"] % 2 == 0:
+        if now[TIME_DAY_KEY] % 2 == 0:
             even_odd = EVEN_INTERVAL_TYPE
         else:
             even_odd = ODD_INTERVAL_TYPE
-        dow = now["day_of_week"]
+        dow = now[TIME_DOW_KEY]
         even_odd_key_set = self.__key_set_helper[even_odd]
         these_programs = list()
         for program_id in even_odd_key_set:
