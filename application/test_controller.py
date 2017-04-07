@@ -1,7 +1,7 @@
 import logging
 import logging.handlers
 from controller import *
-from clock import sim_clock
+from clock import sim_clock, make_now, time_function
 import time
 from program_manager import program_manager
 from settings import settings
@@ -127,7 +127,8 @@ if __name__ == "__main__":
         while i < run_time:
             if i % day == 0:
                 print "Day %d" % ((i/day) + 1)
-            controller.on_tick()
+            now = make_now()
+            controller.on_tick(now)
             
             new_changes = logger.total_changes
             if new_changes != changes:

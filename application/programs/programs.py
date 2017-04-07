@@ -108,6 +108,10 @@ class Program(object):
             self.fix_start_end()
     @property
     def running(self):
+        running = False
+        for sb in self.station_blocks:
+            running = running or sb.in_station
+        self.__running = running
         return self.__running
     @running.setter
     def running(self, value):
@@ -130,16 +134,15 @@ class Program(object):
                     station.in_station = False
     def fix_start_end(self):
         start = self.__time_of_day
+        end = start
         for sb in self.station_blocks:
-            if start >= END_OF_DAY: # We force a 24 hour day
-                start = END_OF_DAY
-            sb.start_time = start
-            sb.end_time = start + sb.duration
-            start = sb.end_time
-            if sb.end_time >= END_OF_DAY: # We force a 24 hour day
-                self.end_time = END_OF_DAY
-        self.min_start_time = min([sb.start_time for sb in self.station_blocks])
-        self.max_end_time = max([sb.end_time for sb in self.station_blocks]) 
+            end += sb.duration
+        if end >= END_OF_DAY: # Force the end at the midnight boundary
+            end = END_OF_DAY
+        
+        self.start_time = start
+        self.end_time = end
+        
     def serialize(self):
         int_d = {INTERVAL_TYPE_KEY : self.interval}
         if not self.interval in even_odd_intervals:
@@ -171,9 +174,9 @@ class Program(object):
         evaluation = TOO_EARLY
         if in_day:
             seconds = now["seconds_from_midnight"]
-            if seconds < self.min_start_time:
+            if seconds < self.start_time:
                 evaluation = TOO_EARLY
-            elif seconds > self.max_end_time:
+            elif seconds >= self.end_time:
                 evaluation =  STOP
             else:
                 evaluation =  START

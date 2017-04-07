@@ -21,7 +21,7 @@ class ProgramManager(object):
             os.makedirs(self.programs_path)
         self.__programs = OrderedDict()
         self.__program_paths = OrderedDict()
-        self.__running_programs = set()
+        self.__running_program = None
         self.__even_keys = set()
         self.__odd_keys = set()
         self.__dow_keys = set()
@@ -135,15 +135,17 @@ class ProgramManager(object):
         #return filter(lambda prog: prog.running, self.__programs.values())
     def move_program(self, program, running):
         if running:
-            self.__running_programs.add(program)
+            self.__running_program = program
             self.logger.log_program_start(program)
         else:
-            self.__running_programs.remove(program)
+            self.__running_program = None
             self.logger.log_program_stop(program)
     def non_running_programs(self):
         return filter(lambda prog: not prog.running, self.__programs.values())
     
     def get_program_to_run(self, now): # We short circuit out of this one the second we find a program
+        if not self.__running_program is None:
+            return self.__running_program
         if now[TIME_DAY_KEY] % 2 == 0:
             even_odd = EVEN_INTERVAL_TYPE
         else:

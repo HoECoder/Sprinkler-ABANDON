@@ -10,7 +10,7 @@ from program_manager import *
 from programs import *
 from program_log import sqlite_program_log
 
-class StationStates(object):
+class StationState(object):
     def __init__(self, controller, program_station_block):
         self.__controller = controller
         self.__program_station_block = program_station_block
@@ -22,7 +22,10 @@ class StationStates(object):
         self.__station = program_station_block.bound_station
         self.__program_id = program_station_block.parent.program_id
         
-        self.__max_run_time = self.__station.duration
+        self.__max_run_time = self.__program_station_block.duration
+    @property
+    def station_id(self):
+        return self.__program_station_block.station_id
     
     @property
     def expired(self):
@@ -45,7 +48,6 @@ class StationStates(object):
         self.__run_time += value
         if self.__run_time > self.__max_run_time:
             self.__expired = True
-            self.running = False
         
 
 class Controller(object):
@@ -109,58 +111,74 @@ class Controller(object):
             else:
                 bit = 0
         self.new_state[station.station_id - 1] = bit
-    
-    def __manage_running_programs(self, now):
-        program_to_run = program_manager.get_program_to_run(now)
-        if not program_to_run is None:
-            #If we have no running program
-            if self.__running_program is None:
-                # Make the time StationStates
-                self.__add_stations_to_queue(program_to_run.station_blocks)
-                
-            # Check if we have an already running program, if so, kill it if it is not the same
-            elif program_to_run.program_id != self.__running_program.program_id:
-                # Kill already running program
-                self.__purge_stations(program_to_run)
-                program_to_run.running = False
-                # Add in new program
-                self.__running_program = program_to_run
-                self.__add_stations_to_queue(program_to_run.station_blocks)
-            else:
-                pass
-    
-    def __service_queue(self, now):
-        seconds_elapsed_since_last_tick = self.__time_check_and_update(now)
-        # The left-most element of the queue is the most immediate station, and the only item to be serviced.
-        # It is popped permanently when it has expired (whether by time or by force)
-        station = self.__station.queue.popleft()
         
-        station.increase_time(seconds_elapsed_since_last_tick)
-        if not station.expired:
-            self.__station_queue.appendleft(station)
-    
     def __dispatch_io(self):
         if not self.state == self.new_state:
             self.dispatcher.write_pattern_to_register(self.state)
-        self.state = deepcopy(self.new_state)
+            self.state = deepcopy(self.new_state)
     
-    def on_tick(self):
+    def on_tick(self, now):
         # This is our main function. Should be called from some sort of loop
-        # 1. We build now (year,month,day,day_of_week,hour,minute,second,seconds_from_midnight)
-        # 2. Check if programs should run
-        # 3. Service the queue and run list
-        # 4. Dispatch IO
+        # 1. Check if programs should run
+        # 2. Service the queue and run list
+        # 3. Dispatch IO
         
-        # 1. Build now
-        now = make_now()
+        # 0. Book keeping
+        seconds_elapsed_since_last_tick = self.__time_check_and_update(now)
         
-        # 2. Check for programs:
-        self.__manage_running_programs(now)
+        # 1. Check for programs
+        # Pull the programs, if any
+        program_to_run = program_manager.get_program_to_run(now)
+        if self.__running_program is None:
+            # No program in the list yet
+            if not program_to_run is None: # New program, work to do! Yay!
+                #print "Insert Program"
+                self.__add_stations_to_queue(program_to_run.station_blocks)
+                self.__running_program = program_to_run
+                self.__running_program.running = True
+                #print "%d stations in queue" % len(self.__station_queue)
+            else:
+                pass # No-op
+        else: # Service existing program
+            if not program_to_run is None:
+                # Need to check program IDs
+                if program_to_run.program_id != self.__running_program.program_id: 
+                    # Kill existing program
+                    self.__purge_stations(self.__running_program)
+                    self.__running_program.running = False
+                    self.__running_program = program_to_run
+                    # Add in new program
+                    self.__running_program.running = True
+                    self.__add_stations_to_queue(self.__running_program.station_blocks)
+                else:
+                    pass # No-op - this is our program. This case is here for completeness
+            else:
+                # We have a running program, but there should be no programs. Gotta stop!
+                self.__running_program.running = False
+                self.__running_program = None
        
-        #3. Service the queue
-        self.__service_queue(now)
+        # 2. Service the queue
+        # The left-most element of the queue is the most immediate station, and the only item to be serviced.
+        # It is popped permanently when it has expired (whether by time or by force)
+        if len(self.__station_queue) > 0:
+            station = self.__station_queue.popleft()
+            
+            station.increase_time(seconds_elapsed_since_last_tick)
+            if not station.expired:
+                self.__station_queue.appendleft(station)
+            else:
+                station.running = False
+                #print "Expired Station: %d" % (station.station_id)
+                del station
+        else: # No elements in the queue
+            # Double check and possibly stop the program
+            if not self.__running_program is None:
+                #print "Expire Program"
+                if len(self.__station_queue) == 0:
+                    self.__running_program.running = False
+                    self.__running_program = None
         
-        # 4. Dispatch IO
+        # 3. Dispatch IO
         self.__dispatch_io()
                 
         
