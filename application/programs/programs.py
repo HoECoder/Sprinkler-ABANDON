@@ -136,7 +136,15 @@ class Program(object):
         start = self.__time_of_day
         end = start
         for sb in self.station_blocks:
-            end += sb.duration
+            adder = 0
+            if sb.bound_station is None:
+                adder = sb.duration
+            else:
+                if sb.bound_station.wired:
+                    adder = sb.duration
+                else:
+                    adder = 0
+            end += adder
         if end >= END_OF_DAY: # Force the end at the midnight boundary
             end = END_OF_DAY
         

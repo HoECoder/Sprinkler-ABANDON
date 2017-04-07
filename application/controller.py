@@ -23,6 +23,8 @@ class StationState(object):
         self.__program_id = program_station_block.parent.program_id
         
         self.__max_run_time = self.__program_station_block.duration
+        if not self.__station.wired:
+            self.__max_run_time = 0
     @property
     def station_id(self):
         return self.__program_station_block.station_id
@@ -86,7 +88,8 @@ class Controller(object):
     
     def __add_stations_to_queue(self, station_blocks):
         for sb in station_blocks:
-            self.__station_queue.append(StationState(self, sb))
+            if sb.bound_station.wired: # Ignore unwired stations
+                self.__station_queue.append(StationState(self, sb))
     
     def __purge_stations(self, program = None):
         if program is None:
@@ -105,7 +108,7 @@ class Controller(object):
     
     def update_state(self, station, value):
         bit = 0
-        if self.station.wired: # Other checks can go in here (lockouts, etc)
+        if station.wired: # Other checks can go in here (lockouts, etc)
             if value:
                 bit = 1
             else:
@@ -162,7 +165,8 @@ class Controller(object):
         # It is popped permanently when it has expired (whether by time or by force)
         if len(self.__station_queue) > 0:
             station = self.__station_queue.popleft()
-            
+            if not station.running:
+                station.running = True
             station.increase_time(seconds_elapsed_since_last_tick)
             if not station.expired:
                 self.__station_queue.appendleft(station)
@@ -170,10 +174,17 @@ class Controller(object):
                 station.running = False
                 #print "Expired Station: %d" % (station.station_id)
                 del station
-        else: # No elements in the queue
-            # Double check and possibly stop the program
+                if len(self.__station_queue) > 0:
+                    station = self.__station_queue.popleft()
+                    if not station.running:
+                        station.running = True
+                    station.increase_time(seconds_elapsed_since_last_tick)
+                    self.__station_queue.appendleft(station)
+
+        # Loop invariant, did we just end the last station?
+        if len(self.__station_queue) == 0:
             if not self.__running_program is None:
-                #print "Expire Program"
+                #print "Expire Program", pretty_now(now)
                 if len(self.__station_queue) == 0:
                     self.__running_program.running = False
                     self.__running_program = None

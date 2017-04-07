@@ -129,9 +129,10 @@ class ProgramManager(object):
                 sb = program.get(station.station_id, None)
                 if not sb is None:
                     sb.bound_station = station
+            program.fix_start_end()
         
     def running_programs(self):
-        return set(self.__running_programs)
+        return set(self.__running_program)
         #return filter(lambda prog: prog.running, self.__programs.values())
     def move_program(self, program, running):
         if running:
