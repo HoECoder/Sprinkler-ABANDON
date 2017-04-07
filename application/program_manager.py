@@ -117,7 +117,7 @@ class ProgramManager(object):
                     self.__program_paths[pp] = new_file_time
                 except IOError, e:
                     print str(e)
-        if len(programs) > 0:
+        if len(programs) > 0: # TODO : Need to evaluate programs for overlap. The scheduling problem
             self.__programs = programs
             return loaded
         else:
@@ -129,7 +129,7 @@ class ProgramManager(object):
                 sb = program.get(station.station_id, None)
                 if not sb is None:
                     sb.bound_station = station
-                
+        
     def running_programs(self):
         return set(self.__running_programs)
         #return filter(lambda prog: prog.running, self.__programs.values())
@@ -142,25 +142,26 @@ class ProgramManager(object):
             self.logger.log_program_stop(program)
     def non_running_programs(self):
         return filter(lambda prog: not prog.running, self.__programs.values())
-    def programs_that_should_run(self, now):
+    
+    def get_program_to_run(self, now): # We short circuit out of this one the second we find a program
         if now[TIME_DAY_KEY] % 2 == 0:
             even_odd = EVEN_INTERVAL_TYPE
         else:
             even_odd = ODD_INTERVAL_TYPE
         dow = now[TIME_DOW_KEY]
         even_odd_key_set = self.__key_set_helper[even_odd]
-        these_programs = list()
+        
         for program_id in even_odd_key_set:
             program = self.__programs[program_id]
             if START == program.evaluate(now):
                 program.running = True
-                these_programs.append(program)
+                return program
         for program_id in self.__dow_keys:
             program = self.__programs[key]
             if dow in program.dow:
                 if START == program.evaluate(now):
                     program.running = True
-                    these_programs.append(program)
-        return these_programs
+                    return program
+        return None
 
 program_manager = ProgramManager()
