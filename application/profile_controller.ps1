@@ -51,7 +51,7 @@ cd D:\src\Sprinkler\application
 $dt = get-date -format "yyyyMMdd_HHmm"
 $prof_name = "test_controller_" + $dt + ".stats"
 $png_name = "prof_" + $dt + ".png"
-python -m cProfile -o $prof_name test_controller.py
+python -m cProfile -o $prof_name test_controller.py -n
 gprof2dot -f pstats $prof_name | dot -Tpng -o $png_name
 
 Pause

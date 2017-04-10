@@ -91,6 +91,8 @@ class ConsoleProgramLog(object):
         print "Register Programs"
         for program in programs:
             serialized = program.serialize()
+            serialized["start_time"] = program.start_time
+            serialized["end_time"] = program.end_time
             s = json.dumps(serialized)
             s= "\t" + s
             print s

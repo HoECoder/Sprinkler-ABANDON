@@ -1,11 +1,11 @@
 import logging
 import logging.handlers
 from controller import *
-from clock import sim_clock
+from clock import sim_clock, make_now, time_function
 import time
 from program_manager import program_manager
 from settings import settings
-from program_log import sqlite_program_log, console_log
+from program_log import sqlite_program_log, console_log, null_log
 import argparse
 
 if os.name == "nt":
@@ -74,6 +74,11 @@ if __name__ == "__main__":
                            action='store_true',
                            default = False,
                            help = "Log to the console")
+    log_group.add_argument("-n",
+                           "--null_log",
+                           action='store_true',
+                           default = False,
+                           help = "No Logging")
     parser.add_argument("-d", 
                         "--days",
                         metavar = "Days",
@@ -108,6 +113,9 @@ if __name__ == "__main__":
         if args.console:
             program_manager.logger = console_log
             logger = console_log
+        elif args.null_log:
+            program_manager.logger = null_log
+            logger = null_log
         else:
             program_manager.logger = sqlite_program_log
             sqlite_program_log.load(args.file)
@@ -127,7 +135,8 @@ if __name__ == "__main__":
         while i < run_time:
             if i % day == 0:
                 print "Day %d" % ((i/day) + 1)
-            controller.on_tick()
+            now = make_now()
+            controller.on_tick(now)
             
             new_changes = logger.total_changes
             if new_changes != changes:
